@@ -5,10 +5,10 @@ import {
   Copy,
   Download,
   ImagePlus,
+  Layers,
   MinusCircle,
   Monitor,
   Moon,
-  Sparkles,
   Sun,
   Upload,
 } from "lucide-react";
@@ -19,7 +19,7 @@ const themePresets = {
   lite: {
     id: "lite",
     name: "Lite",
-    description: "Soft light theme with calm contrast and muted accents.",
+    description: "Clean light canvas — brand colours lead the palette, neutral background keeps visuals sharp.",
     icon: Sun,
     background: "#F7F8FA",
     foreground: "#1F2937",
@@ -29,10 +29,10 @@ const themePresets = {
     paletteBias: 0.18,
     saturation: 0.82,
   },
-  dusk: {
-    id: "dusk",
-    name: "Dusk",
-    description: "Balanced dark theme designed for focused dashboard viewing.",
+  dark: {
+    id: "dark",
+    name: "Dark",
+    description: "Dark canvas built for low-light dashboards — brand colours remain vivid and legible.",
     icon: Moon,
     background: "#111827",
     foreground: "#E5E7EB",
@@ -42,31 +42,31 @@ const themePresets = {
     paletteBias: 0.28,
     saturation: 0.88,
   },
-  mist: {
-    id: "mist",
-    name: "Mist",
-    description: "Neutral grey-blue theme with understated, professional styling.",
-    icon: Monitor,
-    background: "#EEF2F5",
-    foreground: "#243142",
+  canvas: {
+    id: "canvas",
+    name: "Brand Canvas",
+    description: "White visual panels over a brand-coloured background — pair with the PowerPoint canvas template for a modern split layout.",
+    icon: Layers,
+    background: "#F0F4F8",
+    foreground: "#1A2535",
     panel: "#FFFFFF",
-    border: "#D8E0E8",
-    neutralText: "#7E8794",
-    paletteBias: 0.22,
-    saturation: 0.8,
+    border: "#D1DCE8",
+    neutralText: "#6B7A8D",
+    paletteBias: 0.18,
+    saturation: 0.90,
   },
-  nightfall: {
-    id: "nightfall",
-    name: "Nightfall",
-    description: "Muted charcoal theme with soft highlights and restrained colour use.",
-    icon: Sparkles,
-    background: "#0F172A",
-    foreground: "#E2E8F0",
-    panel: "#172033",
-    border: "#2B3548",
-    neutralText: "#9AA3AF",
-    paletteBias: 0.3,
-    saturation: 0.68,
+  contrast: {
+    id: "contrast",
+    name: "Contrast",
+    description: "High-contrast white theme — maximum legibility for data-heavy tables, accessibility requirements, and print output.",
+    icon: Monitor,
+    background: "#FFFFFF",
+    foreground: "#0F172A",
+    panel: "#F8FAFC",
+    border: "#94A3B8",
+    neutralText: "#475569",
+    paletteBias: 0.15,
+    saturation: 0.88,
   },
 };
 
@@ -193,52 +193,53 @@ function buildGeneratedColours(sourceHexes, preset) {
   const bgLum = relativeLuminance(hexToRgb(preset.background));
   const isDark = bgLum < 0.2;
 
-  // Push palette lightness AWAY from the background, not toward it
-  // Light bg → colours need to be darker (34–53%)
-  // Dark bg  → colours need to be lighter (50–70%)
-  const lightMin = isDark ? 0.50 : 0.34;
-  const lightMax = isDark ? 0.70 : 0.53;
+  // Lightness target band — colours must be legible on the background
+  // Light bg → darker colours (30–56%), Dark bg → lighter colours (48–72%)
+  const lightMin = isDark ? 0.48 : 0.30;
+  const lightMax = isDark ? 0.72 : 0.56;
   const lightMid = (lightMin + lightMax) / 2;
 
-  // Saturation bounds — dark themes can support richer colour
+  // Saturation bounds
   const satCap = preset.saturation;
-  const satMin = isDark ? 0.58 : 0.52;
+  const satMin = isDark ? 0.55 : 0.48;
 
   const sourceRgb = ensureDistinct(safeHexes.map(hexToRgb), 50);
   const sourceHsl = sourceRgb.map(rgbToHsl);
 
-  // 8 hue slots: 3 from source, 3 hue-shifted variants, 2 near-complementary
-  // This spreads the palette across the colour wheel rather than clustering
+  // Slots 0-2: adapted source colours — brand colours appear directly in the palette.
+  // Lightness is clamped into the legibility band; saturation blended to preserve brand character.
+  const adaptedSource = sourceRgb.map((rgb) => {
+    const hsl = rgbToHsl(rgb);
+    const l = Math.max(lightMin, Math.min(lightMax, hsl.l));
+    const s = Math.max(satMin, Math.min(satCap, hsl.s * 0.65 + satCap * 0.35));
+    return hslToRgb(hsl.h, s, l);
+  });
+
+  // Slots 3-7: hue-shifted variants and near-complementary fills
   const n = sourceHsl.length;
-  const hues = [
-    sourceHsl[0].h,
-    sourceHsl[1 % n].h,
-    sourceHsl[2 % n].h,
+  const extraHues = [
     (sourceHsl[0].h + 0.10) % 1,
     (sourceHsl[1 % n].h - 0.08 + 1) % 1,
     (sourceHsl[2 % n].h + 0.13) % 1,
     (sourceHsl[0].h + 0.50) % 1,
     (sourceHsl[1 % n].h + 0.44) % 1,
   ];
-
-  // Stagger lightness within the target band for visual variety
-  const lOffsets = [0, -0.04, +0.04, -0.07, +0.07, -0.09, +0.03, -0.06];
-
-  const rawPalette = hues.map((h, i) => {
+  const lOffsets = [-0.04, +0.06, -0.07, +0.04, -0.06];
+  const extraRgb = extraHues.map((h, i) => {
     const srcSat = sourceHsl[i % n].s;
-    // Blend source saturation with preset target to preserve brand character
-    const sat = clamp(srcSat * 0.45 + satCap * 0.55, satMin, satCap);
-    const l   = clamp(lightMid + lOffsets[i], lightMin, lightMax);
+    const sat = Math.max(satMin, Math.min(satCap, srcSat * 0.45 + satCap * 0.55));
+    const l = Math.max(lightMin, Math.min(lightMax, lightMid + lOffsets[i]));
     return hslToRgb(h, sat, l);
   });
 
-  const paletteRgb = ensureDistinct(rawPalette, 32);
+  const paletteRgb = ensureDistinct([...adaptedSource, ...extraRgb], 30);
 
-  // Status colours — lightness adapts to background so they remain legible
-  const statusL = isDark ? 0.60 : 0.40;
-  const good    = hslToRgb(0.350, 0.58, statusL); // green
-  const neutral = hslToRgb(0.125, 0.65, statusL); // amber
-  const bad     = hslToRgb(0.022, 0.64, statusL); // red
+  // Colourblind-friendly status colours (Okabe-Ito inspired).
+  // Teal-green + amber + vermillion are distinguishable for deuteranopes (red-green deficiency).
+  const statusL = isDark ? 0.62 : 0.42;
+  const good    = hslToRgb(0.463, 0.82, statusL); // teal-green ~167°
+  const neutral = hslToRgb(0.108, 0.88, statusL); // amber ~39°
+  const bad     = hslToRgb(0.038, 0.78, statusL); // vermillion ~14°
 
   return {
     palette: paletteRgb.map(rgbToHex),
@@ -719,7 +720,7 @@ export default function PowerBIThemeGeneratorApp() {
         {/* Header */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-3xl">Power BI Theme Generator</CardTitle>
+            <CardTitle className="text-5xl font-bold">Power BI Theme Generator</CardTitle>
             <CardDescription>
               Create restrained, colour-blind-aware Power BI theme JSON files with cleaner defaults for report pages and visuals.
             </CardDescription>
@@ -747,7 +748,7 @@ export default function PowerBIThemeGeneratorApp() {
                     ))}
                   </div>
 
-                  <div className="min-h-[220px]">
+                  <div>
                     {sourceMode === "logo" ? (
                       <>
                         <div
@@ -970,32 +971,25 @@ export default function PowerBIThemeGeneratorApp() {
             {/* Step 4 – Export */}
             <Card>
               <CardHeader>
-                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                  <div>
-                    <CardTitle>4. Export</CardTitle>
-                    <CardDescription>Download the theme JSON for Power BI, or a PowerPoint background template to customise and use as a canvas image.</CardDescription>
-                  </div>
-                  <div className="flex flex-wrap gap-2 shrink-0">
-                    <Button variant="outline" onClick={copyJson}>
-                      {copied ? <CheckCircle2 className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
-                      {copied ? "Copied!" : "Copy JSON"}
-                    </Button>
-                    <Button variant="outline" onClick={handleDownloadPptx} disabled={pptxLoading}>
-                      <Download className="h-4 w-4" />
-                      {pptxLoading ? "Generating…" : "PowerPoint"}
-                    </Button>
-                    <Button onClick={() => downloadJson(`${themeName.replace(/\s+/g, "-").toLowerCase()}.json`, formattedJson)}>
-                      <Download className="h-4 w-4" />
-                      Download JSON
-                    </Button>
-                  </div>
-                </div>
+                <CardTitle>4. Export</CardTitle>
+                <CardDescription>Download the theme JSON for Power BI, or a PowerPoint background template to customise and use as a canvas image.</CardDescription>
               </CardHeader>
               <CardContent>
-                <pre className="max-h-[420px] overflow-auto rounded-2xl bg-slate-900 p-4 text-[11px] leading-relaxed text-slate-200 font-mono whitespace-pre-wrap">
-                  {formattedJson}
-                </pre>
-                <div className="mt-3 space-y-1 text-xs text-slate-500">
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <Button variant="outline" onClick={copyJson}>
+                    {copied ? <CheckCircle2 className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                    {copied ? "Copied!" : "Copy JSON"}
+                  </Button>
+                  <Button variant="outline" onClick={handleDownloadPptx} disabled={pptxLoading}>
+                    <Download className="h-4 w-4" />
+                    {pptxLoading ? "Generating…" : "PowerPoint"}
+                  </Button>
+                  <Button onClick={() => downloadJson(`${themeName.replace(/\s+/g, "-").toLowerCase()}.json`, formattedJson)}>
+                    <Download className="h-4 w-4" />
+                    Download JSON
+                  </Button>
+                </div>
+                <div className="space-y-1 text-xs text-slate-500">
                   <p><span className="font-medium">Theme JSON:</span> in Power BI Desktop go to <span className="font-medium">View → Themes → Browse for themes</span> and select the <code className="rounded bg-slate-100 px-1 py-0.5">.json</code> file.</p>
                   <p><span className="font-medium">PowerPoint template:</span> open the <code className="rounded bg-slate-100 px-1 py-0.5">.pptx</code>, customise slides 2 &amp; 3, then right-click each slide → <span className="font-medium">Save as Picture → SVG</span> (preferred) or PNG. Apply in Power BI: Format pane → Canvas background → Image. Set canvas size to <span className="font-medium">1600 × 900 px</span>.</p>
                 </div>
