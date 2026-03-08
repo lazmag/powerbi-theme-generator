@@ -66,7 +66,7 @@ const themePresets = {
     border: "#2B3548",
     neutralText: "#9AA3AF",
     paletteBias: 0.3,
-    saturation: 0.86,
+    saturation: 0.68,
   },
 };
 
@@ -156,6 +156,11 @@ function withHsl(rgb, adjustments) {
   );
 }
 
+function relativeLuminance([r, g, b]) {
+  const lin = (c) => { const s = c / 255; return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4; };
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+}
+
 function colourDistance(a, b) {
   return Math.sqrt((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2);
 }
@@ -183,34 +188,57 @@ function buildGeneratedColours(sourceHexes, preset) {
   const baseHexes = sourceHexes.filter(Boolean).slice(0, 3);
   const safeHexes = (baseHexes.length ? baseHexes : defaultSourceColours())
     .map(normaliseHex).filter(Boolean);
-  const background = hexToRgb(preset.background);
-  const baseColours = ensureDistinct(safeHexes.map(hexToRgb), 52);
 
-  const variants = [
-    { index: 0, blendAmount: preset.paletteBias * 0.55, lightness: 1.0 },
-    { index: 1, blendAmount: preset.paletteBias * 0.64, lightness: 1.04 },
-    { index: 2, blendAmount: preset.paletteBias * 0.72, lightness: 0.98 },
-    { index: 0, blendAmount: preset.paletteBias * 0.9, lightness: 1.12 },
-    { index: 1, blendAmount: preset.paletteBias * 1.02, lightness: 0.9 },
-    { index: 2, blendAmount: preset.paletteBias * 1.12, lightness: 1.08 },
-    { index: 0, blendAmount: preset.paletteBias * 1.2, lightness: 0.84 },
-    { index: 1, blendAmount: preset.paletteBias * 1.28, lightness: 1.16 },
+  // Determine theme type from background luminance (WCAG-based)
+  const bgLum = relativeLuminance(hexToRgb(preset.background));
+  const isDark = bgLum < 0.2;
+
+  // Push palette lightness AWAY from the background, not toward it
+  // Light bg → colours need to be darker (34–53%)
+  // Dark bg  → colours need to be lighter (50–70%)
+  const lightMin = isDark ? 0.50 : 0.34;
+  const lightMax = isDark ? 0.70 : 0.53;
+  const lightMid = (lightMin + lightMax) / 2;
+
+  // Saturation bounds — dark themes can support richer colour
+  const satCap = preset.saturation;
+  const satMin = isDark ? 0.58 : 0.52;
+
+  const sourceRgb = ensureDistinct(safeHexes.map(hexToRgb), 50);
+  const sourceHsl = sourceRgb.map(rgbToHsl);
+
+  // 8 hue slots: 3 from source, 3 hue-shifted variants, 2 near-complementary
+  // This spreads the palette across the colour wheel rather than clustering
+  const n = sourceHsl.length;
+  const hues = [
+    sourceHsl[0].h,
+    sourceHsl[1 % n].h,
+    sourceHsl[2 % n].h,
+    (sourceHsl[0].h + 0.10) % 1,
+    (sourceHsl[1 % n].h - 0.08 + 1) % 1,
+    (sourceHsl[2 % n].h + 0.13) % 1,
+    (sourceHsl[0].h + 0.50) % 1,
+    (sourceHsl[1 % n].h + 0.44) % 1,
   ];
 
-  const paletteRgb = ensureDistinct(
-    variants.map((v) => {
-      const base = baseColours[v.index % baseColours.length];
-      const current = rgbToHsl(base);
-      const adjusted = withHsl(base, { s: current.s * preset.saturation, l: current.l * v.lightness });
-      return blend(adjusted, background, Math.min(0.45, v.blendAmount));
-    }),
-    30,
-  );
+  // Stagger lightness within the target band for visual variety
+  const lOffsets = [0, -0.04, +0.04, -0.07, +0.07, -0.09, +0.03, -0.06];
 
-  const tintRef = baseColours.length > 1 ? blend(baseColours[0], baseColours[1], 0.35) : baseColours[0];
-  const good    = blend(withHsl([92, 138, 103], { s: 0.34, l: 0.45 }), tintRef, 0.12);
-  const neutral = blend(withHsl([166, 135, 88], { s: 0.34, l: 0.49 }), tintRef, 0.1);
-  const bad     = blend(withHsl([171, 99, 101], { s: 0.38, l: 0.48 }), tintRef, 0.08);
+  const rawPalette = hues.map((h, i) => {
+    const srcSat = sourceHsl[i % n].s;
+    // Blend source saturation with preset target to preserve brand character
+    const sat = clamp(srcSat * 0.45 + satCap * 0.55, satMin, satCap);
+    const l   = clamp(lightMid + lOffsets[i], lightMin, lightMax);
+    return hslToRgb(h, sat, l);
+  });
+
+  const paletteRgb = ensureDistinct(rawPalette, 32);
+
+  // Status colours — lightness adapts to background so they remain legible
+  const statusL = isDark ? 0.60 : 0.40;
+  const good    = hslToRgb(0.350, 0.58, statusL); // green
+  const neutral = hslToRgb(0.125, 0.65, statusL); // amber
+  const bad     = hslToRgb(0.022, 0.64, statusL); // red
 
   return {
     palette: paletteRgb.map(rgbToHex),
