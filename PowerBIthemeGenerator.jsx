@@ -223,41 +223,48 @@ function buildGeneratedColours(sourceHexes, preset) {
 function buildThemeJson({ themeName, preset, fontFamily, baseText, titleText, smallText, showLegendTitle, roundedCorners, generatedColours }) {
   return {
     name: themeName,
-    foreground: preset.foreground,
-    background: preset.background,
-    tableAccent: generatedColours.palette[0],
     dataColors: generatedColours.palette,
+    background: preset.background,
+    foreground: preset.foreground,
+    tableAccent: generatedColours.palette[0],
     good: generatedColours.good,
     neutral: generatedColours.neutral,
     bad: generatedColours.bad,
+    textClasses: {
+      title:   { fontFace: fontFamily, fontSize: titleText,     color: preset.foreground },
+      header:  { fontFace: fontFamily, fontSize: baseText,      color: preset.foreground },
+      label:   { fontFace: fontFamily, fontSize: baseText,      color: preset.foreground },
+      callout: { fontFace: fontFamily, fontSize: titleText + 6, color: preset.foreground },
+    },
     visualStyles: {
       "*": {
         "*": {
-          title: [{ show: true, fontFamily, fontSize: titleText, color: { solid: { color: preset.foreground } } }],
+          title: [{ show: true, fontSize: titleText, fontFamily, fontColor: { solid: { color: preset.foreground } } }],
           background: [{ transparency: 100 }],
           visualHeader: [{ show: false }],
-          border: [{ show: false, radius: roundedCorners }],
-          labels: [{ color: { solid: { color: preset.foreground } }, fontSize: baseText, fontFamily }],
-        },
-      },
-      categoryAxis: {
-        "*": {
-          title: [{ show: false }],
-          labels: [{ color: { solid: { color: preset.foreground } }, fontSize: baseText, fontFamily }],
-          gridlines: [{ show: false }],
-        },
-      },
-      valueAxis: {
-        "*": {
-          title: [{ show: false }],
-          labels: [{ color: { solid: { color: preset.foreground } }, fontSize: baseText, fontFamily }],
-          gridlines: [{ show: true, color: { solid: { color: preset.border } }, transparency: 65 }],
-        },
-      },
-      legend: {
-        "*": {
-          title: [{ show: showLegendTitle }],
-          labels: [{ color: { solid: { color: preset.foreground } }, fontSize: smallText, fontFamily }],
+          border: [{ show: false, cornerRadius: roundedCorners }],
+          categoryAxis: [{
+            showAxisTitle: false,
+            labelColor: { solid: { color: preset.foreground } },
+            fontSize: baseText,
+            fontFamily,
+            gridlineShow: false,
+          }],
+          valueAxis: [{
+            showAxisTitle: false,
+            labelColor: { solid: { color: preset.foreground } },
+            fontSize: baseText,
+            fontFamily,
+            gridlineShow: true,
+            gridlineColor: { solid: { color: preset.border } },
+          }],
+          legend: [{
+            show: true,
+            showTitle: showLegendTitle,
+            labelColor: { solid: { color: preset.foreground } },
+            fontSize: smallText,
+            fontFamily,
+          }],
         },
       },
       card: {
@@ -268,27 +275,17 @@ function buildThemeJson({ themeName, preset, fontFamily, baseText, titleText, sm
       },
       tableEx: {
         "*": {
-          grid: [{ gridVertical: true, gridHorizontal: false, outlineColor: { solid: { color: preset.border } }, fontSize: baseText, fontFamily }],
+          grid: [{ gridVertical: true, gridHorizontal: false, outlineColor: { solid: { color: preset.border } } }],
           values: [{ color: { solid: { color: preset.foreground } }, fontSize: baseText, fontFamily }],
           columnHeaders: [{ color: { solid: { color: preset.foreground } }, fontSize: baseText, fontFamily, outline: "BottomOnly", outlineColor: { solid: { color: preset.border } } }],
         },
       },
       slicer: {
         "*": {
-          title: [{ show: true, fontSize: baseText, fontFamily, color: { solid: { color: preset.foreground } } }],
-          items: [{ fontSize: baseText, fontFamily, color: { solid: { color: preset.foreground } } }],
+          title: [{ show: true, fontSize: baseText, fontFamily, fontColor: { solid: { color: preset.foreground } } }],
+          items: [{ fontSize: baseText, fontFamily, fontColor: { solid: { color: preset.foreground } } }],
         },
       },
-    },
-    textClasses: {
-      title:   { fontFace: fontFamily, fontSize: titleText,     color: preset.foreground },
-      header:  { fontFace: fontFamily, fontSize: baseText,      color: preset.foreground },
-      label:   { fontFace: fontFamily, fontSize: baseText,      color: preset.foreground },
-      callout: { fontFace: fontFamily, fontSize: titleText + 6, color: preset.foreground },
-    },
-    page: {
-      background: [{ color: { solid: { color: preset.background } }, transparency: 0 }],
-      wallpaper:  [{ color: { solid: { color: preset.background } }, transparency: 0 }],
     },
   };
 }
