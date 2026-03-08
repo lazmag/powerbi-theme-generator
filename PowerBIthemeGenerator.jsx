@@ -289,12 +289,18 @@ function buildThemeJson({ themeName, preset, fontFamily, baseText, titleText, sm
             gridlineShow: false,
           }],
           valueAxis: [{
+            show: false,
             showAxisTitle: false,
-            labelColor: { solid: { color: preset.foreground } },
-            fontSize: baseText,
+            gridlineShow: false,
+          }],
+          dataLabels: [{
+            show: true,
+            color: { solid: { color: preset.foreground } },
+            fontSize: smallText,
             fontFamily,
-            gridlineShow: true,
-            gridlineColor: { solid: { color: preset.border } },
+            enableBackground: true,
+            backgroundColor: { solid: { color: preset.panel } },
+            backgroundTransparency: 20,
           }],
           legend: [{
             show: true,
