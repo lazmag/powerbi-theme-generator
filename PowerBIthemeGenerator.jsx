@@ -568,18 +568,11 @@ export default function PowerBIThemeGeneratorApp() {
         neutral: hx(preset.neutralText),
         border:  hx(preset.border),
         accent:  hx(generatedColours.palette[0]),
+        accent2: hx(generatedColours.palette[1]),
       };
 
-      const HEADER_H = 0.75;
       const FOOTER_H = 0.375;
       const FOOTER_Y = SH - FOOTER_H;
-
-      // Shared chrome: header bar + title + footer bar (no accent strip)
-      const chrome = (sl, title) => {
-        sl.addShape(pres.ShapeType.rect, { x: 0, y: 0, w: W, h: HEADER_H, fill: { color: COL.panel }, line: { type: "none" } });
-        sl.addText(title, { x: 0.5, y: 0, w: W - 1, h: HEADER_H, fontSize: 20, fontFace: fontFamily, color: COL.fg, bold: true, valign: "middle" });
-        sl.addShape(pres.ShapeType.rect, { x: 0, y: FOOTER_Y, w: W, h: FOOTER_H, fill: { color: COL.panel }, line: { type: "none" } });
-      };
 
       // ── Slide 1: Instructions ────────────────────────────────────────────────
       const s1 = pres.addSlide();
@@ -616,96 +609,150 @@ export default function PowerBIThemeGeneratorApp() {
       });
 
       // ── Slide 2: Home / Landing page ─────────────────────────────────────────
+      // Design: bold brand-colour hero (top 40%) → thin dual-tone stripe →
+      // clean white content area with intro text and CTA
       const s2 = pres.addSlide();
-      s2.background = { color: COL.bg };
+      s2.background = { color: COL.panel };
 
-      // Left vertical accent strip — modern edge detail, replaces top bar
-      s2.addShape(pres.ShapeType.rect, { x: 0, y: 0, w: 0.1, h: SH, fill: { color: COL.accent }, line: { type: "none" } });
+      const HERO_H = 3.75;
+      const PAD2  = 0.65;
 
-      // Logo placeholder only — no org name text beside it
-      const logoX = 0.8, logoY = 0.6, logoW = 2.8, logoH = 1.3;
-      s2.addShape(pres.ShapeType.roundRect, { x: logoX, y: logoY, w: logoW, h: logoH, fill: { color: COL.panel }, line: { color: COL.border, width: 1.5, dashType: "dash" }, rectRadius: 0.06 });
-      s2.addText("[ Logo ]", { x: logoX, y: logoY, w: logoW, h: logoH, fontSize: 12, fontFace: fontFamily, color: COL.neutral, align: "center", valign: "middle", italic: true });
+      // Hero background — primary brand accent colour
+      s2.addShape(pres.ShapeType.rect, { x: 0, y: 0, w: W, h: HERO_H, fill: { color: COL.accent }, line: { type: "none" } });
 
-      // Separator line below logo
-      const sepY = logoY + logoH + 0.4;
-      s2.addShape(pres.ShapeType.rect, { x: 0.8, y: sepY, w: W - 0.9, h: 0.05, fill: { color: COL.accent }, line: { type: "none" } });
+      // Dual-tone boundary stripe (accent2 left 35%, neutral right 65%)
+      s2.addShape(pres.ShapeType.rect, { x: 0,        y: HERO_H, w: W * 0.35, h: 0.1, fill: { color: COL.accent2 }, line: { type: "none" } });
+      s2.addShape(pres.ShapeType.rect, { x: W * 0.35, y: HERO_H, w: W * 0.65, h: 0.1, fill: { color: COL.border },  line: { type: "none" } });
 
-      // Report title — large and prominent
-      const titleY2 = sepY + 0.3;
-      s2.addText("[Report Name]", { x: 0.8, y: titleY2, w: W - 1.6, h: 1.1, fontSize: 36, fontFace: fontFamily, color: COL.fg, bold: true });
+      // Logo placeholder — white box, top-left of hero
+      s2.addShape(pres.ShapeType.roundRect, { x: PAD2, y: 0.55, w: 2.4, h: 0.82, fill: { color: "FFFFFF" }, line: { type: "none" }, rectRadius: 0.05 });
+      s2.addText("[ Logo ]", { x: PAD2, y: 0.55, w: 2.4, h: 0.82, fontSize: 10, fontFace: fontFamily, color: "8C8F96", align: "center", valign: "middle", italic: true });
+
+      // Report name — large white text, anchored to bottom of hero
+      s2.addText("[Report Name]", { x: PAD2, y: HERO_H - 1.55, w: W - PAD2 * 2, h: 1.1, fontSize: 48, fontFace: fontFamily, color: "FFFFFF", bold: true, valign: "middle" });
+
+      // Tagline — italic white, just above the boundary stripe
+      s2.addText("[Report tagline or department]", { x: PAD2, y: HERO_H - 0.52, w: W * 0.65, h: 0.38, fontSize: 13, fontFace: fontFamily, color: "FFFFFF", italic: true });
+
+      // Content area — starts 0.5" below the stripe
+      const c2Y = HERO_H + 0.1 + 0.5;
 
       // "About this report" label
-      const aboutLabelY = titleY2 + 1.2;
-      s2.addText("About this report", { x: 0.8, y: aboutLabelY, w: 5, h: 0.32, fontSize: 11, fontFace: fontFamily, color: COL.neutral, bold: true });
+      s2.addText("About this report", { x: PAD2, y: c2Y, w: 5, h: 0.34, fontSize: 11, fontFace: fontFamily, color: COL.neutral, bold: true });
 
-      // Intro text box — clean solid border
-      const introY = aboutLabelY + 0.35;
-      const introH = 2.8;
-      s2.addShape(pres.ShapeType.roundRect, { x: 0.8, y: introY, w: W - 1.6, h: introH, fill: { color: COL.panel }, line: { color: COL.border, width: 1 }, rectRadius: 0.08 });
+      // Intro text box
+      const iY2 = c2Y + 0.38;
+      const iH2 = FOOTER_Y - iY2 - 0.9;
+      s2.addShape(pres.ShapeType.roundRect, { x: PAD2, y: iY2, w: W - PAD2 * 2, h: iH2, fill: { color: COL.bg }, line: { color: COL.border, width: 1 }, rectRadius: 0.1 });
       s2.addText(
-        "Introduce this report to your audience here. Describe what the report focuses on, which key KPIs it tracks, and what decisions it is designed to support. Replace this placeholder text before publishing.",
-        { x: 1.1, y: introY + 0.25, w: W - 2.2, h: introH - 0.5, fontSize: 11, fontFace: fontFamily, color: COL.neutral, valign: "top" }
+        "Replace this text with a brief overview of what this report covers, which KPIs it tracks, and who it is intended for.",
+        { x: PAD2 + 0.3, y: iY2 + 0.25, w: W - PAD2 * 2 - 0.6, h: iH2 - 0.5, fontSize: 12, fontFace: fontFamily, color: COL.neutral, valign: "top" }
       );
 
-      // Navigation button
-      const btnY2 = introY + introH + 0.55;
-      s2.addShape(pres.ShapeType.roundRect, { x: 0.8, y: btnY2, w: 4.5, h: 0.7, fill: { color: COL.accent }, line: { type: "none" }, rectRadius: 0.1 });
-      s2.addText("View Overview Page  \u2192", { x: 0.8, y: btnY2, w: 4.5, h: 0.7, fontSize: 13, fontFace: fontFamily, color: "FFFFFF", align: "center", valign: "middle" });
+      // CTA button
+      const btnY2 = FOOTER_Y - 0.72;
+      s2.addShape(pres.ShapeType.roundRect, { x: PAD2, y: btnY2, w: 4.2, h: 0.58, fill: { color: COL.accent }, line: { type: "none" }, rectRadius: 0.08 });
+      s2.addText("View Overview Page  \u2192", { x: PAD2, y: btnY2, w: 4.2, h: 0.58, fontSize: 12, fontFace: fontFamily, color: "FFFFFF", align: "center", valign: "middle" });
 
-      // Footer — empty bar, no text
-      s2.addShape(pres.ShapeType.rect, { x: 0, y: FOOTER_Y, w: W, h: FOOTER_H, fill: { color: COL.panel }, line: { type: "none" } });
+      // Footer — empty
+      s2.addShape(pres.ShapeType.rect, { x: 0, y: FOOTER_Y, w: W, h: FOOTER_H, fill: { color: COL.bg }, line: { type: "none" } });
 
       // ── Slide 3: Report page ─────────────────────────────────────────────────
+      // Design: brand-colour header → accent2 stripe → left filter sidebar →
+      // KPI card row → asymmetric chart grid (1 large + 2 stacked) → footer
       const s3 = pres.addSlide();
       s3.background = { color: COL.bg };
 
-      const S3H = 0.7;
-      const S3A = 0.065;
-      const SIDEBAR_W = 2.2;
-      const SIDEBAR_Y = S3H + S3A;
+      const HDR_H   = 0.82;
+      const HDR_ACC = 0.07;
+      const SB_W    = 2.15;
+      const CONT_Y3 = HDR_H + HDR_ACC;       // 0.89"
+      const CONT_X3 = SB_W;                  // 2.15"
+      const CONT_W3 = W - SB_W;              // 14.517"
+      const SB_H3   = FOOTER_Y - CONT_Y3;    // 8.11"
 
-      // Header + accent strip
-      s3.addShape(pres.ShapeType.rect, { x: 0, y: 0, w: W, h: S3H, fill: { color: COL.panel }, line: { type: "none" } });
-      s3.addShape(pres.ShapeType.rect, { x: 0, y: S3H, w: W, h: S3A, fill: { color: COL.accent }, line: { type: "none" } });
+      const KPI_PAD  = 0.2;
+      const KPI_H3   = 1.28;
+      const KPI_Y3   = CONT_Y3 + KPI_PAD;   // 1.09"
+      const KPI_COLS = 4;
+      const KPI_W3   = (CONT_W3 - KPI_PAD * (KPI_COLS + 1)) / KPI_COLS; // ≈ 3.30"
 
-      // Logo placeholder (small, in header)
-      s3.addShape(pres.ShapeType.roundRect, { x: 0.2, y: 0.13, w: 1.5, h: 0.44, fill: { color: COL.bg }, line: { color: COL.border, width: 1, dashType: "dash" }, rectRadius: 0.04 });
-      s3.addText("[ Logo ]", { x: 0.2, y: 0.13, w: 1.5, h: 0.44, fontSize: 8, fontFace: fontFamily, color: COL.neutral, align: "center", valign: "middle", italic: true });
+      // Header — brand accent
+      s3.addShape(pres.ShapeType.rect, { x: 0, y: 0, w: W, h: HDR_H, fill: { color: COL.accent }, line: { type: "none" } });
+      // Thin accent2 stripe below header
+      s3.addShape(pres.ShapeType.rect, { x: 0, y: HDR_H, w: W, h: HDR_ACC, fill: { color: COL.accent2 }, line: { type: "none" } });
 
-      // Page title — bigger
-      s3.addText("[Page Title]", { x: 2.0, y: 0.1, w: 7, h: 0.52, fontSize: 22, fontFace: fontFamily, color: COL.fg, bold: true, valign: "middle" });
+      // Logo — white box in header (left)
+      s3.addShape(pres.ShapeType.roundRect, { x: 0.18, y: 0.14, w: 1.65, h: 0.54, fill: { color: "FFFFFF" }, line: { type: "none" }, rectRadius: 0.04 });
+      s3.addText("[ Logo ]", { x: 0.18, y: 0.14, w: 1.65, h: 0.54, fontSize: 8, fontFace: fontFamily, color: "8C8F96", align: "center", valign: "middle", italic: true });
 
-      // Nav buttons: Page 1, Page 2, Page 3, Home
-      const BTN_W = 1.55, BTN_H = 0.44, BTN_GAP = 0.12;
-      const navLabels = ["Page 1", "Page 2", "Page 3", "Home"];
-      const navStartX = W - 0.2 - 4 * BTN_W - 3 * BTN_GAP;
-      navLabels.forEach((label, i) => {
-        const bx = navStartX + i * (BTN_W + BTN_GAP);
-        const isHome = i === 3;
+      // Page title — white, header
+      s3.addText("[Page Title]", { x: 2.08, y: 0.1, w: 7.5, h: HDR_H - 0.1, fontSize: 22, fontFace: fontFamily, color: "FFFFFF", bold: true, valign: "middle" });
+
+      // Nav buttons — right side of header
+      const N_W = 1.5, N_H = 0.46, N_GAP = 0.1;
+      const navLbls3 = ["Page 1", "Page 2", "Page 3", "Home"];
+      const navX3 = W - 0.2 - navLbls3.length * N_W - (navLbls3.length - 1) * N_GAP;
+      navLbls3.forEach((label, i) => {
+        const bx = navX3 + i * (N_W + N_GAP);
+        const isHome = label === "Home";
         s3.addShape(pres.ShapeType.roundRect, {
-          x: bx, y: 0.13, w: BTN_W, h: BTN_H,
-          fill: isHome ? { color: COL.accent } : { color: COL.panel },
-          line: isHome ? { type: "none" } : { color: COL.accent, width: 1 },
+          x: bx, y: (HDR_H - N_H) / 2, w: N_W, h: N_H,
+          fill: isHome ? { color: "FFFFFF" } : { type: "none" },
+          line: isHome ? { type: "none" } : { color: "FFFFFF", width: 1 },
           rectRadius: 0.06,
         });
-        s3.addText(label, { x: bx, y: 0.13, w: BTN_W, h: BTN_H, fontSize: 9, fontFace: fontFamily, color: isHome ? "FFFFFF" : COL.accent, align: "center", valign: "middle" });
+        s3.addText(label, { x: bx, y: (HDR_H - N_H) / 2, w: N_W, h: N_H, fontSize: 9, fontFace: fontFamily, color: isHome ? COL.accent : "FFFFFF", align: "center", valign: "middle" });
       });
 
-      // Sidebar (panel colour)
-      const sidebarH = FOOTER_Y - SIDEBAR_Y;
-      s3.addShape(pres.ShapeType.rect, { x: 0, y: SIDEBAR_Y, w: SIDEBAR_W, h: sidebarH, fill: { color: COL.panel }, line: { type: "none" } });
-      s3.addText("Filters / Slicers", { x: 0.2, y: SIDEBAR_Y + 0.2, w: SIDEBAR_W - 0.3, h: 0.28, fontSize: 9, fontFace: fontFamily, color: COL.neutral, bold: true });
-      s3.addShape(pres.ShapeType.rect, { x: 0.15, y: SIDEBAR_Y + 0.55, w: SIDEBAR_W - 0.3, h: 0.04, fill: { color: COL.border }, line: { type: "none" } });
-      [0, 1, 2].forEach((j) => {
-        const sy = SIDEBAR_Y + 0.72 + j * 0.88;
-        s3.addShape(pres.ShapeType.roundRect, { x: 0.2, y: sy, w: SIDEBAR_W - 0.35, h: 0.68, fill: { color: COL.bg }, line: { color: COL.border, width: 1, dashType: "dash" }, rectRadius: 0.04 });
-        s3.addText(`[Slicer ${j + 1}]`, { x: 0.2, y: sy, w: SIDEBAR_W - 0.35, h: 0.68, fontSize: 8, fontFace: fontFamily, color: COL.neutral, align: "center", valign: "middle", italic: true });
+      // Sidebar — panel colour, with right border line
+      s3.addShape(pres.ShapeType.rect, { x: 0, y: CONT_Y3, w: SB_W, h: SB_H3, fill: { color: COL.panel }, line: { type: "none" } });
+      s3.addShape(pres.ShapeType.rect, { x: SB_W - 0.035, y: CONT_Y3, w: 0.035, h: SB_H3, fill: { color: COL.border }, line: { type: "none" } });
+
+      // Sidebar: label + 4 slicer placeholders
+      s3.addText("Filters", { x: 0.18, y: CONT_Y3 + 0.2, w: SB_W - 0.3, h: 0.26, fontSize: 9, fontFace: fontFamily, color: COL.neutral, bold: true });
+      [0, 1, 2, 3].forEach((j) => {
+        const sy = CONT_Y3 + 0.6 + j * 1.84;
+        if (sy + 1.65 > FOOTER_Y) return;
+        s3.addText(`[Slicer ${j + 1}]`, { x: 0.18, y: sy, w: SB_W - 0.32, h: 0.24, fontSize: 8, fontFace: fontFamily, color: COL.neutral });
+        s3.addShape(pres.ShapeType.roundRect, { x: 0.18, y: sy + 0.26, w: SB_W - 0.32, h: 1.42, fill: { color: COL.bg }, line: { color: COL.border, width: 1, dashType: "dash" }, rectRadius: 0.05 });
       });
 
-      // Footer — last refreshed only
+      // KPI row — 4 cards with accent-coloured dashed borders
+      for (let k = 0; k < KPI_COLS; k++) {
+        const kx = CONT_X3 + KPI_PAD + k * (KPI_W3 + KPI_PAD);
+        s3.addShape(pres.ShapeType.roundRect, { x: kx, y: KPI_Y3, w: KPI_W3, h: KPI_H3, fill: { color: COL.panel }, line: { color: k === 0 ? COL.accent : COL.accent2, width: 1.5, dashType: "sysDash" }, rectRadius: 0.08 });
+        s3.addText(`KPI ${k + 1}`, { x: kx + 0.18, y: KPI_Y3 + 0.14, w: KPI_W3 - 0.28, h: 0.24, fontSize: 8, fontFace: fontFamily, color: COL.neutral });
+        s3.addText("00,000", { x: kx + 0.18, y: KPI_Y3 + 0.40, w: KPI_W3 - 0.28, h: 0.54, fontSize: 24, fontFace: fontFamily, color: COL.fg, bold: true });
+        s3.addText("metric label", { x: kx + 0.18, y: KPI_Y3 + 0.95, w: KPI_W3 - 0.28, h: 0.22, fontSize: 8, fontFace: fontFamily, color: COL.neutral });
+      }
+
+      // Chart area — below KPI row
+      const CY3 = KPI_Y3 + KPI_H3 + KPI_PAD;
+      const CH3 = FOOTER_Y - CY3 - KPI_PAD;
+      const CX3 = CONT_X3 + KPI_PAD;
+      const CW3 = CONT_W3 - KPI_PAD * 2;
+      const C_GAP = 0.2;
+
+      // Left: large main chart (58% width, full height)
+      const C_LEFT_W = CW3 * 0.58;
+      s3.addShape(pres.ShapeType.roundRect, { x: CX3, y: CY3, w: C_LEFT_W, h: CH3, fill: { color: COL.panel }, line: { color: COL.border, width: 1, dashType: "dash" }, rectRadius: 0.1 });
+      s3.addText("[Main Chart]", { x: CX3, y: CY3 + CH3 / 2 - 0.2, w: C_LEFT_W, h: 0.4, fontSize: 11, fontFace: fontFamily, color: COL.border, align: "center", italic: true });
+
+      // Right: two stacked charts (42% width)
+      const C_RIGHT_X = CX3 + C_LEFT_W + C_GAP;
+      const C_RIGHT_W = CW3 - C_LEFT_W - C_GAP;
+      const C_RIGHT_H = (CH3 - C_GAP) / 2;
+      ["[Chart 2]", "[Chart 3]"].forEach((lbl, r) => {
+        const cy3r = CY3 + r * (C_RIGHT_H + C_GAP);
+        s3.addShape(pres.ShapeType.roundRect, { x: C_RIGHT_X, y: cy3r, w: C_RIGHT_W, h: C_RIGHT_H, fill: { color: COL.panel }, line: { color: COL.border, width: 1, dashType: "dash" }, rectRadius: 0.1 });
+        s3.addText(lbl, { x: C_RIGHT_X, y: cy3r + C_RIGHT_H / 2 - 0.2, w: C_RIGHT_W, h: 0.4, fontSize: 10, fontFace: fontFamily, color: COL.border, align: "center", italic: true });
+      });
+
+      // Footer — thin accent top line, last refreshed right
       s3.addShape(pres.ShapeType.rect, { x: 0, y: FOOTER_Y, w: W, h: FOOTER_H, fill: { color: COL.panel }, line: { type: "none" } });
-      s3.addText("Last refreshed: [Date]", { x: W - 4.5, y: FOOTER_Y + 0.07, w: 4.2, h: 0.24, fontSize: 8, fontFace: fontFamily, color: COL.neutral, align: "right" });
+      s3.addShape(pres.ShapeType.rect, { x: 0, y: FOOTER_Y, w: W, h: 0.03, fill: { color: COL.accent }, line: { type: "none" } });
+      s3.addText("Last refreshed: [Date]", { x: W - 4.5, y: FOOTER_Y + 0.06, w: 4.2, h: 0.28, fontSize: 8, fontFace: fontFamily, color: COL.neutral, align: "right" });
 
       await pres.writeFile({ fileName: `${slug}-background-template.pptx` });
     } finally {
