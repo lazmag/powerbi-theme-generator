@@ -570,106 +570,101 @@ export default function PowerBIThemeGeneratorApp() {
       };
 
       const HEADER_H = 0.75;
-      const ACCENT_H = 0.065;
       const FOOTER_H = 0.375;
       const FOOTER_Y = SH - FOOTER_H;
 
-      // Shared chrome: header bar + accent strip + header title + footer bar
+      // Shared chrome: header bar + title + footer bar (no accent strip)
       const chrome = (sl, title) => {
         sl.addShape(pres.ShapeType.rect, { x: 0, y: 0, w: W, h: HEADER_H, fill: { color: COL.panel }, line: { type: "none" } });
-        sl.addShape(pres.ShapeType.rect, { x: 0, y: HEADER_H, w: W, h: ACCENT_H, fill: { color: COL.accent }, line: { type: "none" } });
-        sl.addText(title, { x: 0.5, y: 0, w: W - 1, h: HEADER_H, fontSize: 14, fontFace: fontFamily, color: COL.fg, valign: "middle" });
+        sl.addText(title, { x: 0.5, y: 0, w: W - 1, h: HEADER_H, fontSize: 20, fontFace: fontFamily, color: COL.fg, bold: true, valign: "middle" });
         sl.addShape(pres.ShapeType.rect, { x: 0, y: FOOTER_Y, w: W, h: FOOTER_H, fill: { color: COL.panel }, line: { type: "none" } });
       };
 
       // ── Slide 1: Instructions ────────────────────────────────────────────────
       const s1 = pres.addSlide();
       s1.background = { color: COL.bg };
-      chrome(s1, "Power BI Background Template — Instructions");
+      // Title directly on background — no header bar
+      s1.addText("Power BI Background Template — How to Use", { x: 0.7, y: 0.25, w: W - 1.4, h: 0.95, fontSize: 32, fontFace: fontFamily, color: COL.fg, bold: true, valign: "middle" });
+      // Footer bar only
+      s1.addShape(pres.ShapeType.rect, { x: 0, y: FOOTER_Y, w: W, h: FOOTER_H, fill: { color: COL.panel }, line: { type: "none" } });
 
       const steps = [
         { title: "About this file", body: "This PowerPoint file is a design starting point for your Power BI report backgrounds. Slide 2 is a home/landing page template and Slide 3 is a standard report page template. Customise them in PowerPoint, export each slide, then apply as a canvas background in Power BI Desktop." },
         { title: "Set your Power BI canvas size", body: "In Power BI Desktop: Format pane → Canvas settings → Canvas size → Custom. Set Width to 1600 and Height to 900. Apply this setting to every report page before placing visuals." },
-        { title: "Customise the slides", body: "Open this file in Microsoft PowerPoint. On Slides 2 and 3, replace the logo placeholder with your company logo, update the report name and organisation name, and delete all placeholder guide labels before exporting." },
-        { title: "Export as SVG (recommended) or PNG", body: "Right-click a slide → Save as Picture → SVG. SVG is vector — it stays crisp at any canvas size with no pixelation. Alternatively export as PNG (right-click → Save as Picture → PNG) which gives 1600 × 900 px at the default 96 DPI." },
-        { title: "Apply as canvas background in Power BI Desktop", body: "Select a report page → Format pane → Canvas background → Image → browse to your exported SVG or PNG file. Set Transparency to 0 %. Repeat for each page using the corresponding slide export." },
+        { title: "Customise the slides", body: "Open this file in Microsoft PowerPoint. On Slides 2 and 3, replace the logo placeholder with your company logo, update the report name, and delete all placeholder guide labels before exporting." },
+        { title: "Export as SVG (recommended) or PNG", body: "Right-click a slide → Save as Picture → SVG. SVG is vector — it stays crisp at any canvas size. Alternatively export as PNG (right-click → Save as Picture → PNG) which gives 1600 × 900 px at the default 96 DPI." },
+        { title: "Apply as canvas background in Power BI Desktop", body: "Select a report page → Format pane → Canvas background → Image → browse to your exported SVG or PNG. Set Transparency to 0 %. Repeat for each page using the corresponding slide export." },
         { title: "Import the matching theme JSON", body: "Apply the companion theme file: View → Themes → Browse for themes → select the .json file from Power BI Theme Generator. This aligns chart and visual colours with your background design." },
       ];
 
-      const DOT = 0.36;
+      const DOT = 0.5;
       const PAD_X = 0.7;
       const STEP_W = W - PAD_X * 2;
-      const STEP_START_Y = HEADER_H + ACCENT_H + 0.28;
-      const STEP_H = (FOOTER_Y - STEP_START_Y - 0.1) / 6;
+      const STEP_START_Y = 1.45;
+      const STEP_H = (FOOTER_Y - STEP_START_Y - 0.15) / 6;
 
       steps.forEach(({ title, body }, i) => {
         const sy = STEP_START_Y + i * STEP_H;
-        const dotY = sy + (STEP_H - DOT) / 2 - 0.05;
+        const titleY = sy + 0.04;
+        // Dot aligned to top of title text
+        const dotY = titleY;
         s1.addShape(pres.ShapeType.ellipse, { x: PAD_X, y: dotY, w: DOT, h: DOT, fill: { color: COL.accent }, line: { type: "none" } });
-        s1.addText(String(i + 1), { x: PAD_X, y: dotY, w: DOT, h: DOT, fontSize: 9, fontFace: fontFamily, color: "FFFFFF", bold: true, align: "center", valign: "middle" });
-        s1.addText(title, { x: PAD_X + DOT + 0.18, y: sy + 0.04, w: STEP_W - DOT - 0.18, h: 0.3, fontSize: 11, fontFace: fontFamily, color: COL.fg, bold: true });
-        s1.addText(body, { x: PAD_X + DOT + 0.18, y: sy + 0.36, w: STEP_W - DOT - 0.18, h: STEP_H - 0.42, fontSize: 9, fontFace: fontFamily, color: COL.neutral });
+        s1.addText(String(i + 1), { x: PAD_X, y: dotY, w: DOT, h: DOT, fontSize: 14, fontFace: fontFamily, color: "FFFFFF", bold: true, align: "center", valign: "middle" });
+        s1.addText(title, { x: PAD_X + DOT + 0.22, y: titleY, w: STEP_W - DOT - 0.22, h: 0.5, fontSize: 17, fontFace: fontFamily, color: COL.fg, bold: true });
+        s1.addText(body, { x: PAD_X + DOT + 0.22, y: titleY + 0.54, w: STEP_W - DOT - 0.22, h: STEP_H - 0.64, fontSize: 14, fontFace: fontFamily, color: COL.neutral });
       });
 
       // ── Slide 2: Home / Landing page ─────────────────────────────────────────
       const s2 = pres.addSlide();
       s2.background = { color: COL.bg };
 
-      // Top accent strip (replaces standard header — landing page feel)
-      s2.addShape(pres.ShapeType.rect, { x: 0, y: 0, w: W, h: 0.15, fill: { color: COL.accent }, line: { type: "none" } });
+      // Left vertical accent strip — modern edge detail, replaces top bar
+      s2.addShape(pres.ShapeType.rect, { x: 0, y: 0, w: 0.1, h: SH, fill: { color: COL.accent }, line: { type: "none" } });
 
-      // Logo placeholder — larger and in main content area (not a narrow header)
-      const logoX = 0.7, logoY = 0.42, logoW = 2.6, logoH = 1.2;
+      // Logo placeholder only — no org name text beside it
+      const logoX = 0.8, logoY = 0.6, logoW = 2.8, logoH = 1.3;
       s2.addShape(pres.ShapeType.roundRect, { x: logoX, y: logoY, w: logoW, h: logoH, fill: { color: COL.panel }, line: { color: COL.border, width: 1.5, dashType: "dash" }, rectRadius: 0.06 });
-      s2.addText("[ Logo ]", { x: logoX, y: logoY, w: logoW, h: logoH, fontSize: 11, fontFace: fontFamily, color: COL.neutral, align: "center", valign: "middle", italic: true });
+      s2.addText("[ Logo ]", { x: logoX, y: logoY, w: logoW, h: logoH, fontSize: 12, fontFace: fontFamily, color: COL.neutral, align: "center", valign: "middle", italic: true });
 
-      // Organisation name beside logo
-      s2.addText("[Organisation Name]", { x: logoX + logoW + 0.25, y: logoY + 0.15, w: 8, h: 0.45, fontSize: 12, fontFace: fontFamily, color: COL.neutral });
+      // Separator line below logo
+      const sepY = logoY + logoH + 0.4;
+      s2.addShape(pres.ShapeType.rect, { x: 0.8, y: sepY, w: W - 0.9, h: 0.05, fill: { color: COL.accent }, line: { type: "none" } });
 
-      // Separator line
-      const sepY = logoY + logoH + 0.32;
-      s2.addShape(pres.ShapeType.rect, { x: 0.7, y: sepY, w: W - 1.4, h: 0.05, fill: { color: COL.accent }, line: { type: "none" } });
+      // Report title — large and prominent
+      const titleY2 = sepY + 0.3;
+      s2.addText("[Report Name]", { x: 0.8, y: titleY2, w: W - 1.6, h: 1.1, fontSize: 36, fontFace: fontFamily, color: COL.fg, bold: true });
 
-      // Report title
-      const titleY2 = sepY + 0.28;
-      s2.addText("[Report Name]", { x: 0.7, y: titleY2, w: W - 1.4, h: 0.9, fontSize: 30, fontFace: fontFamily, color: COL.fg, bold: true });
+      // "About this report" label
+      const aboutLabelY = titleY2 + 1.2;
+      s2.addText("About this report", { x: 0.8, y: aboutLabelY, w: 5, h: 0.32, fontSize: 11, fontFace: fontFamily, color: COL.neutral, bold: true });
 
-      // Subtitle
-      const subtitleY = titleY2 + 0.95;
-      s2.addText("[Reporting Period  |  Department]", { x: 0.7, y: subtitleY, w: W - 1.4, h: 0.4, fontSize: 12, fontFace: fontFamily, color: COL.neutral });
-
-      // "About this report" section label
-      const aboutLabelY = subtitleY + 0.6;
-      s2.addText("About this report", { x: 0.7, y: aboutLabelY, w: 5, h: 0.28, fontSize: 10, fontFace: fontFamily, color: COL.neutral, bold: true });
-
-      // Intro text box
-      const introY = aboutLabelY + 0.3;
-      const introH = 2.5;
-      s2.addShape(pres.ShapeType.roundRect, { x: 0.7, y: introY, w: W - 1.4, h: introH, fill: { color: COL.panel }, line: { color: COL.border, width: 1, dashType: "dash" }, rectRadius: 0.06 });
+      // Intro text box — clean solid border
+      const introY = aboutLabelY + 0.35;
+      const introH = 2.8;
+      s2.addShape(pres.ShapeType.roundRect, { x: 0.8, y: introY, w: W - 1.6, h: introH, fill: { color: COL.panel }, line: { color: COL.border, width: 1 }, rectRadius: 0.08 });
       s2.addText(
         "Introduce this report to your audience here. Describe what the report focuses on, which key KPIs it tracks, and what decisions it is designed to support. Replace this placeholder text before publishing.",
-        { x: 0.95, y: introY + 0.2, w: W - 1.9, h: introH - 0.4, fontSize: 10, fontFace: fontFamily, color: COL.neutral, valign: "top" }
+        { x: 1.1, y: introY + 0.25, w: W - 2.2, h: introH - 0.5, fontSize: 11, fontFace: fontFamily, color: COL.neutral, valign: "top" }
       );
 
-      // Navigate button placeholder
-      const btnY2 = introY + introH + 0.5;
-      s2.addShape(pres.ShapeType.roundRect, { x: 0.7, y: btnY2, w: 4.2, h: 0.65, fill: { color: COL.accent }, line: { type: "none" }, rectRadius: 0.08 });
-      s2.addText("View Overview Page  \u2192", { x: 0.7, y: btnY2, w: 4.2, h: 0.65, fontSize: 12, fontFace: fontFamily, color: "FFFFFF", align: "center", valign: "middle" });
+      // Navigation button
+      const btnY2 = introY + introH + 0.55;
+      s2.addShape(pres.ShapeType.roundRect, { x: 0.8, y: btnY2, w: 4.5, h: 0.7, fill: { color: COL.accent }, line: { type: "none" }, rectRadius: 0.1 });
+      s2.addText("View Overview Page  \u2192", { x: 0.8, y: btnY2, w: 4.5, h: 0.7, fontSize: 13, fontFace: fontFamily, color: "FFFFFF", align: "center", valign: "middle" });
 
-      // Footer
+      // Footer — empty bar, no text
       s2.addShape(pres.ShapeType.rect, { x: 0, y: FOOTER_Y, w: W, h: FOOTER_H, fill: { color: COL.panel }, line: { type: "none" } });
-      s2.addText("[Organisation Name]  |  [Report Name]", { x: 0.35, y: FOOTER_Y + 0.07, w: 10, h: 0.24, fontSize: 8, fontFace: fontFamily, color: COL.neutral });
 
       // ── Slide 3: Report page ─────────────────────────────────────────────────
       const s3 = pres.addSlide();
       s3.background = { color: COL.bg };
 
-      const S3H = 0.7;   // header height
-      const S3A = 0.065; // accent strip height
+      const S3H = 0.7;
+      const S3A = 0.065;
       const SIDEBAR_W = 2.2;
       const SIDEBAR_Y = S3H + S3A;
 
-      // Header bar + accent strip
+      // Header + accent strip
       s3.addShape(pres.ShapeType.rect, { x: 0, y: 0, w: W, h: S3H, fill: { color: COL.panel }, line: { type: "none" } });
       s3.addShape(pres.ShapeType.rect, { x: 0, y: S3H, w: W, h: S3A, fill: { color: COL.accent }, line: { type: "none" } });
 
@@ -677,10 +672,10 @@ export default function PowerBIThemeGeneratorApp() {
       s3.addShape(pres.ShapeType.roundRect, { x: 0.2, y: 0.13, w: 1.5, h: 0.44, fill: { color: COL.bg }, line: { color: COL.border, width: 1, dashType: "dash" }, rectRadius: 0.04 });
       s3.addText("[ Logo ]", { x: 0.2, y: 0.13, w: 1.5, h: 0.44, fontSize: 8, fontFace: fontFamily, color: COL.neutral, align: "center", valign: "middle", italic: true });
 
-      // Page title
-      s3.addText("[Page Title]", { x: 2.0, y: 0.15, w: 7, h: 0.42, fontSize: 14, fontFace: fontFamily, color: COL.fg, valign: "middle" });
+      // Page title — bigger
+      s3.addText("[Page Title]", { x: 2.0, y: 0.1, w: 7, h: 0.52, fontSize: 22, fontFace: fontFamily, color: COL.fg, bold: true, valign: "middle" });
 
-      // Nav buttons: Page 1, Page 2, Page 3, Home (right side of header)
+      // Nav buttons: Page 1, Page 2, Page 3, Home
       const BTN_W = 1.55, BTN_H = 0.44, BTN_GAP = 0.12;
       const navLabels = ["Page 1", "Page 2", "Page 3", "Home"];
       const navStartX = W - 0.2 - 4 * BTN_W - 3 * BTN_GAP;
@@ -699,8 +694,6 @@ export default function PowerBIThemeGeneratorApp() {
       // Sidebar (panel colour)
       const sidebarH = FOOTER_Y - SIDEBAR_Y;
       s3.addShape(pres.ShapeType.rect, { x: 0, y: SIDEBAR_Y, w: SIDEBAR_W, h: sidebarH, fill: { color: COL.panel }, line: { type: "none" } });
-
-      // Sidebar: filters label + separator + 3 slicer placeholders
       s3.addText("Filters / Slicers", { x: 0.2, y: SIDEBAR_Y + 0.2, w: SIDEBAR_W - 0.3, h: 0.28, fontSize: 9, fontFace: fontFamily, color: COL.neutral, bold: true });
       s3.addShape(pres.ShapeType.rect, { x: 0.15, y: SIDEBAR_Y + 0.55, w: SIDEBAR_W - 0.3, h: 0.04, fill: { color: COL.border }, line: { type: "none" } });
       [0, 1, 2].forEach((j) => {
@@ -709,9 +702,8 @@ export default function PowerBIThemeGeneratorApp() {
         s3.addText(`[Slicer ${j + 1}]`, { x: 0.2, y: sy, w: SIDEBAR_W - 0.35, h: 0.68, fontSize: 8, fontFace: fontFamily, color: COL.neutral, align: "center", valign: "middle", italic: true });
       });
 
-      // Footer
+      // Footer — last refreshed only
       s3.addShape(pres.ShapeType.rect, { x: 0, y: FOOTER_Y, w: W, h: FOOTER_H, fill: { color: COL.panel }, line: { type: "none" } });
-      s3.addText("[Report Name]  |  Page [n]", { x: 0.35, y: FOOTER_Y + 0.07, w: 8, h: 0.24, fontSize: 8, fontFace: fontFamily, color: COL.neutral });
       s3.addText("Last refreshed: [Date]", { x: W - 4.5, y: FOOTER_Y + 0.07, w: 4.2, h: 0.24, fontSize: 8, fontFace: fontFamily, color: COL.neutral, align: "right" });
 
       await pres.writeFile({ fileName: `${slug}-background-template.pptx` });
