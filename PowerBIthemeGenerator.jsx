@@ -249,6 +249,10 @@ function buildGeneratedColours(sourceHexes, preset) {
 }
 
 function buildThemeJson({ themeName, preset, fontFamily, baseText, titleText, smallText, showLegendTitle, roundedCorners, generatedColours }) {
+  const isDark = relativeLuminance(hexToRgb(preset.background)) < 0.2;
+  // Applied filter card bg: lifted above the pane on dark themes, depressed below panel on light themes
+  const appliedCardBg = isDark ? preset.panel : preset.border;
+
   return {
     name: themeName,
     dataColors: generatedColours.palette,
@@ -258,6 +262,12 @@ function buildThemeJson({ themeName, preset, fontFamily, baseText, titleText, sm
     good: generatedColours.good,
     neutral: generatedColours.neutral,
     bad: generatedColours.bad,
+    // Full structural color set — required for dark themes to propagate correctly
+    firstLevelElements: preset.foreground,
+    secondLevelElements: preset.neutralText,
+    thirdLevelElements: preset.border,
+    fourthLevelElements: preset.neutralText,
+    secondaryBackground: preset.panel,
     textClasses: {
       title:   { fontFace: fontFamily, fontSize: titleText,     color: preset.foreground },
       header:  { fontFace: fontFamily, fontSize: baseText,      color: preset.foreground },
@@ -293,6 +303,47 @@ function buildThemeJson({ themeName, preset, fontFamily, baseText, titleText, sm
             fontSize: smallText,
             fontFamily,
           }],
+          // Filter pane panel
+          outspacePane: [{
+            backgroundColor: { solid: { color: preset.panel } },
+            foregroundColor: { solid: { color: preset.foreground } },
+            borderColor: { solid: { color: preset.border } },
+            transparency: 0,
+            fontFamily,
+            border: false,
+          }],
+          // Filter cards — Applied (active) clearly distinct, Available (inactive) subtle
+          filterCard: [
+            {
+              $id: "Applied",
+              backgroundColor: { solid: { color: appliedCardBg } },
+              foregroundColor: { solid: { color: preset.foreground } },
+              borderColor: { solid: { color: generatedColours.palette[0] } },
+              inputBoxColor: { solid: { color: preset.panel } },
+              transparency: 0,
+              fontFamily,
+              border: true,
+              textSize: smallText,
+            },
+            {
+              $id: "Available",
+              backgroundColor: { solid: { color: preset.background } },
+              foregroundColor: { solid: { color: preset.neutralText } },
+              borderColor: { solid: { color: preset.border } },
+              inputBoxColor: { solid: { color: preset.panel } },
+              transparency: 0,
+              fontFamily,
+              border: false,
+              textSize: smallText,
+            },
+          ],
+        },
+      },
+      // Page canvas and outer area background
+      page: {
+        "*": {
+          background: [{ color: { solid: { color: preset.background } }, transparency: 0 }],
+          outspace: [{ color: { solid: { color: preset.panel } }, transparency: 0 }],
         },
       },
       card: {
