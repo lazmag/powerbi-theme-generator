@@ -488,6 +488,7 @@ export default function PowerBIThemeGeneratorApp() {
   const [showLegendTitle, setShowLegendTitle] = useState(false);
   const [roundedCorners, setRoundedCorners] = useState(6);
   const [copied, setCopied] = useState(false);
+  const [pptxLoading, setPptxLoading] = useState(false);
 
   const [sourceMode, setSourceMode] = useState("logo");
   const [manualHexes, setManualHexes] = useState(["", "", ""]);
@@ -544,6 +545,136 @@ export default function PowerBIThemeGeneratorApp() {
   };
 
   useEffect(() => { if (sourceMode === "manual") setLogoError(""); }, [sourceMode]);
+
+  const handleDownloadPptx = async () => {
+    setPptxLoading(true);
+    try {
+      const { default: PptxGenJS } = await import("pptxgenjs");
+      const pres = new PptxGenJS();
+      pres.layout = "LAYOUT_WIDE"; // 13.33" × 7.5", 16:9
+
+      const hex = (h) => h.replace("#", "");
+      const W = 13.33;
+      const headerH = 0.62;
+      const accentH = 0.05;
+      const slug = themeName.replace(/\s+/g, "-").toLowerCase();
+
+      // ── Slide 1: Report background template ──────────────────────────────────
+      const s1 = pres.addSlide();
+      s1.background = { color: hex(preset.background) };
+
+      s1.addShape(pres.ShapeType.rect, {
+        x: 0, y: 0, w: W, h: headerH,
+        fill: { color: hex(preset.panel) },
+        line: { type: "none" },
+      });
+      s1.addShape(pres.ShapeType.rect, {
+        x: 0, y: headerH, w: W, h: accentH,
+        fill: { color: hex(generatedColours.palette[0]) },
+        line: { type: "none" },
+      });
+      s1.addText("Report Title", {
+        x: 0.35, y: 0, w: 7, h: headerH,
+        fontSize: 16, fontFace: fontFamily,
+        color: hex(preset.foreground),
+        bold: false, valign: "middle",
+      });
+
+      // Palette dot row in header right — visual reference for developers
+      const sw = 0.2, sg = 0.07;
+      generatedColours.palette.slice(0, 8).forEach((c, i) => {
+        s1.addShape(pres.ShapeType.roundRect, {
+          x: W - 0.3 - (8 - i) * (sw + sg),
+          y: (headerH - sw) / 2,
+          w: sw, h: sw,
+          fill: { color: hex(c) },
+          line: { type: "none" },
+          rectRadius: 0.15,
+        });
+      });
+
+      // ── Slide 2: Colour reference sheet ──────────────────────────────────────
+      const s2 = pres.addSlide();
+      s2.background = { color: hex(preset.background) };
+
+      s2.addShape(pres.ShapeType.rect, {
+        x: 0, y: 0, w: W, h: headerH,
+        fill: { color: hex(preset.panel) },
+        line: { type: "none" },
+      });
+      s2.addShape(pres.ShapeType.rect, {
+        x: 0, y: headerH, w: W, h: accentH,
+        fill: { color: hex(generatedColours.palette[0]) },
+        line: { type: "none" },
+      });
+      s2.addText(`${themeName} — Colour Reference`, {
+        x: 0.35, y: 0, w: 11, h: headerH,
+        fontSize: 16, fontFace: fontFamily,
+        color: hex(preset.foreground),
+        valign: "middle",
+      });
+
+      // Palette swatches — 2 rows × 4 columns
+      const cW = 1.45, cH = 0.85, cG = 0.18;
+      const startX = 0.4, startY = headerH + accentH + 0.55;
+      generatedColours.palette.forEach((c, i) => {
+        const col = i % 4, row = Math.floor(i / 4);
+        const x = startX + col * (cW + cG);
+        const y = startY + row * (cH + 0.38);
+        s2.addShape(pres.ShapeType.roundRect, {
+          x, y, w: cW, h: cH,
+          fill: { color: hex(c) },
+          line: { type: "none" },
+          rectRadius: 0.1,
+        });
+        s2.addText(c.toUpperCase(), {
+          x, y: y + cH + 0.05, w: cW, h: 0.24,
+          fontSize: 8, fontFace: fontFamily,
+          color: hex(preset.foreground),
+          align: "center",
+        });
+      });
+
+      // Status colours
+      const statY = startY + 2 * (cH + 0.38) + 0.55;
+      s2.addText("Status colours", {
+        x: startX, y: statY - 0.3, w: 5, h: 0.27,
+        fontSize: 9, fontFace: fontFamily,
+        color: hex(preset.neutralText),
+      });
+      [
+        { label: "Good",    c: generatedColours.good },
+        { label: "Neutral", c: generatedColours.neutral },
+        { label: "Bad",     c: generatedColours.bad },
+      ].forEach(({ label, c }, i) => {
+        const x = startX + i * (cW + cG);
+        s2.addShape(pres.ShapeType.roundRect, {
+          x, y: statY, w: cW, h: 0.42,
+          fill: { color: hex(c) },
+          line: { type: "none" },
+          rectRadius: 0.1,
+        });
+        s2.addText(`${label}   ${c.toUpperCase()}`, {
+          x, y: statY + 0.46, w: cW, h: 0.24,
+          fontSize: 8, fontFace: fontFamily,
+          color: hex(preset.foreground),
+          align: "center",
+        });
+      });
+
+      // Font name — top right of reference slide
+      s2.addText(`Font: ${fontFamily}`, {
+        x: W - 3.5, y: startY, w: 3.1, h: 0.27,
+        fontSize: 9, fontFace: fontFamily,
+        color: hex(preset.neutralText),
+        align: "right",
+      });
+
+      await pres.writeFile({ fileName: `${slug}-background-template.pptx` });
+    } finally {
+      setPptxLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen w-full overflow-auto bg-slate-50 p-6 text-slate-900">
@@ -805,17 +936,21 @@ export default function PowerBIThemeGeneratorApp() {
               <CardHeader>
                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div>
-                    <CardTitle>4. Export JSON</CardTitle>
-                    <CardDescription>Copy the JSON or download it and import it into Power BI Desktop.</CardDescription>
+                    <CardTitle>4. Export</CardTitle>
+                    <CardDescription>Download the theme JSON for Power BI, or a PowerPoint background template to customise and use as a canvas image.</CardDescription>
                   </div>
-                  <div className="flex gap-2 shrink-0">
+                  <div className="flex flex-wrap gap-2 shrink-0">
                     <Button variant="outline" onClick={copyJson}>
                       {copied ? <CheckCircle2 className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
-                      {copied ? "Copied!" : "Copy"}
+                      {copied ? "Copied!" : "Copy JSON"}
+                    </Button>
+                    <Button variant="outline" onClick={handleDownloadPptx} disabled={pptxLoading}>
+                      <Download className="h-4 w-4" />
+                      {pptxLoading ? "Generating…" : "PowerPoint"}
                     </Button>
                     <Button onClick={() => downloadJson(`${themeName.replace(/\s+/g, "-").toLowerCase()}.json`, formattedJson)}>
                       <Download className="h-4 w-4" />
-                      Download
+                      Download JSON
                     </Button>
                   </div>
                 </div>
@@ -824,9 +959,10 @@ export default function PowerBIThemeGeneratorApp() {
                 <pre className="max-h-[420px] overflow-auto rounded-2xl bg-slate-900 p-4 text-[11px] leading-relaxed text-slate-200 font-mono whitespace-pre-wrap">
                   {formattedJson}
                 </pre>
-                <p className="mt-3 text-xs text-slate-500">
-                  In Power BI Desktop: <span className="font-medium">View → Themes → Browse for themes</span> — then select the downloaded <code className="rounded bg-slate-100 px-1 py-0.5">.json</code> file.
-                </p>
+                <div className="mt-3 space-y-1 text-xs text-slate-500">
+                  <p><span className="font-medium">Theme JSON:</span> in Power BI Desktop go to <span className="font-medium">View → Themes → Browse for themes</span> and select the <code className="rounded bg-slate-100 px-1 py-0.5">.json</code> file.</p>
+                  <p><span className="font-medium">PowerPoint template:</span> open the <code className="rounded bg-slate-100 px-1 py-0.5">.pptx</code>, customise slide 1, then export it as a PNG and set it as the canvas background in Power BI Desktop via <span className="font-medium">View → Page background</span>.</p>
+                </div>
               </CardContent>
             </Card>
           </div>
