@@ -413,7 +413,8 @@ async function extractMainColoursFromFile(file) {
           if (cur) cur.count++; else buckets.set(key, { count: 1, rgb: keyRgb });
         }
         const ranked = Array.from(buckets.values()).sort((a, b) => b.count - a.count).map(e => e.rgb);
-        const distinct = ensureDistinct(ranked, 54).slice(0, 3).map(rgbToHex);
+        const distinct = ensureDistinct(ranked, 54).slice(0, 3).map(rgbToHex)
+          .sort((a, b) => relativeLuminance(hexToRgb(a)) - relativeLuminance(hexToRgb(b)));
         resolve(distinct.length ? distinct : defaultSourceColours());
       };
       image.onerror = () => reject(new Error("Unable to load the uploaded image."));
@@ -608,187 +609,177 @@ export default function PowerBIThemeGeneratorApp() {
         s1.addText(body, { x: PAD_X + DOT + 0.22, y: titleY + 0.54, w: STEP_W - DOT - 0.22, h: STEP_H - 0.64, fontSize: 14, fontFace: fontFamily, color: COL.neutral });
       });
 
-      // ── Determine theme variant ─────────────────────────────────────────────
-      const isDark = relativeLuminance(hexToRgb(preset.background)) < 0.18;
+      // ── Template variant setup ───────────────────────────────────────────────
       const accent3 = hx(generatedColours.palette[2] || generatedColours.palette[0]);
+      const toHex6 = (rgb) => rgbToHex(rgb).replace("#", "");
+      // Dark bg shades derived from brand accent — used by canvas/contrast full-adaptation templates
+      const _p0hsl = rgbToHsl(hexToRgb(generatedColours.palette[0]));
+      const BD1 = toHex6(hslToRgb(_p0hsl.h, Math.min(0.90, _p0hsl.s * 0.70 + 0.20), 0.10));
+      const BD2 = toHex6(hslToRgb(_p0hsl.h, Math.min(0.85, _p0hsl.s * 0.60 + 0.15), 0.19));
+      const BD3 = toHex6(hslToRgb(_p0hsl.h, Math.min(0.80, _p0hsl.s * 0.50 + 0.12), 0.27));
 
-      // ── Slide 2: Home / Landing page ─────────────────────────────────────────
-      const s2 = pres.addSlide();
-      s2.background = { color: COL.bg };
-      const PAD2 = 0.4;
-
-      if (isDark) {
-        // ── DARK HOME: left text column + right KPI highlight panel ──────────
-
-        // Logo placeholder (top-left, no box)
-        s2.addText("[ Logo ]", { x: PAD2, y: 0.32, w: 2.0, h: 0.45, fontSize: 10, fontFace: fontFamily, color: COL.neutral, italic: true });
-
-        // Title — large bold
-        s2.addText("Welcome to your\n[Report Name]", { x: PAD2, y: 1.45, w: 8.0, h: 2.0, fontSize: 36, fontFace: fontFamily, color: COL.fg, bold: true });
-
-        // Body text
-        s2.addText(
-          "Replace this text with a brief overview of what this report covers, which KPIs it tracks, and who it is intended for.",
-          { x: PAD2, y: 3.65, w: 7.8, h: 0.55, fontSize: 11, fontFace: fontFamily, color: COL.neutral },
-        );
-        s2.addText(
-          "Use the navigation buttons below to move between sections. Values on the right update based on your access level.",
-          { x: PAD2, y: 4.28, w: 7.8, h: 0.5, fontSize: 11, fontFace: fontFamily, color: COL.neutral, italic: true },
-        );
-
-        // 2 nav buttons — pill, accent fill
-        const BTN_W = 2.4, BTN_H = 0.58, BTN_GAP = 0.25;
-        s2.addShape(pres.ShapeType.roundRect, { x: PAD2, y: 5.85, w: BTN_W, h: BTN_H, fill: { color: COL.accent }, line: { type: "none" }, rectRadius: 0.29 });
-        s2.addText("[Page 1]", { x: PAD2, y: 5.85, w: BTN_W, h: BTN_H, fontSize: 11, fontFace: fontFamily, color: "FFFFFF", align: "center", valign: "middle", bold: true });
-        s2.addShape(pres.ShapeType.roundRect, { x: PAD2 + BTN_W + BTN_GAP, y: 5.85, w: BTN_W, h: BTN_H, fill: { color: COL.accent }, line: { type: "none" }, rectRadius: 0.29 });
-        s2.addText("[Page 2]", { x: PAD2 + BTN_W + BTN_GAP, y: 5.85, w: BTN_W, h: BTN_H, fontSize: 11, fontFace: fontFamily, color: "FFFFFF", align: "center", valign: "middle", bold: true });
-
-        // Right KPI panel — rounded, panel fill, accent border + accent right bar
-        const PNL_X = 8.8, PNL_Y = 0.65, PNL_W = W - PNL_X - 0.3, PNL_H = SH - PNL_Y - 0.35;
-        s2.addShape(pres.ShapeType.roundRect, { x: PNL_X, y: PNL_Y, w: PNL_W, h: PNL_H, fill: { color: COL.panel }, line: { color: COL.accent, width: 1.5 }, rectRadius: 0.14 });
-        // Thin accent bar on right edge
-        s2.addShape(pres.ShapeType.rect, { x: PNL_X + PNL_W - 0.12, y: PNL_Y + 0.14, w: 0.1, h: PNL_H - 0.28, fill: { color: COL.accent }, line: { type: "none" } });
-
-        // "Hello !" heading in accent
-        s2.addText("Hello !", { x: PNL_X + 0.3, y: PNL_Y + 0.38, w: PNL_W - 0.7, h: 0.55, fontSize: 22, fontFace: fontFamily, color: COL.accent, align: "center" });
-        s2.addText("Here are your key highlights for today:", { x: PNL_X + 0.3, y: PNL_Y + 1.05, w: PNL_W - 0.7, h: 0.38, fontSize: 12, fontFace: fontFamily, color: COL.fg, bold: true, align: "center" });
-
-        // KPI rows: 3 metrics + refresh date
-        const kpiDefs2 = ["[KPI Metric 1]", "[KPI Metric 2]", "[KPI Metric 3]", "Last data refresh"];
-        kpiDefs2.forEach((label, i) => {
-          const ky = PNL_Y + 1.62 + i * 1.35;
-          if (ky + 1.15 > PNL_Y + PNL_H - 0.2) return;
-          const isRefresh = i === kpiDefs2.length - 1;
-          s2.addShape(pres.ShapeType.ellipse, { x: PNL_X + 0.35, y: ky + 0.06, w: 0.6, h: 0.6, fill: { color: COL.bg }, line: { color: COL.accent, width: 1 } });
-          s2.addText(label, { x: PNL_X + 1.1, y: ky, w: PNL_W - 1.45, h: 0.3, fontSize: 10, fontFace: fontFamily, color: COL.fg, bold: true });
-          s2.addText(isRefresh ? "[Date]" : "[Value]", { x: PNL_X + 1.1, y: ky + 0.33, w: PNL_W - 1.45, h: 0.35, fontSize: 12, fontFace: fontFamily, color: isRefresh ? COL.accent : COL.fg });
+      // Adds the curved gradient background sweep used in dark-style templates
+      const addDarkBg = (s, d1, d2) => {
+        s.background = { color: d1 };
+        s.addShape(pres.ShapeType.roundRect, {
+          x: 2.8, y: -0.5, w: 14.2, h: SH + 1.0,
+          fill: { color: d2 }, line: { type: "none" }, rectRadius: 1.2,
         });
+      };
 
-      } else {
-        // ── LIGHT HOME: title + body top-left, 3 nav cards bottom ────────────
-
-        // Logo placeholder (no box)
-        s2.addText("[ Logo ]", { x: PAD2, y: 0.32, w: 2.0, h: 0.5, fontSize: 10, fontFace: fontFamily, color: COL.neutral, italic: true });
-
-        // Title
-        s2.addText("Welcome to the\n[Report Name]", { x: PAD2, y: 1.45, w: 9.5, h: 2.0, fontSize: 38, fontFace: fontFamily, color: COL.fg, bold: true });
-
-        // Body
-        s2.addText(
-          "Replace this text with a brief overview of what this report covers, which KPIs it tracks, and who it is intended for.",
-          { x: PAD2, y: 3.65, w: 9.5, h: 0.55, fontSize: 11, fontFace: fontFamily, color: COL.neutral },
-        );
-        s2.addText(
-          "Use the navigation cards below to explore each section. To return to this page, click the logo in the bottom-right corner of each report page.",
-          { x: PAD2, y: 4.28, w: 9.5, h: 0.55, fontSize: 11, fontFace: fontFamily, color: COL.neutral, italic: true },
-        );
-
+      if (preset.id === "lite") {
+        // ── LIGHT TEMPLATE — 4 slides ────────────────────────────────────────
+        // Slide 2: Home / Cover
+        const s2 = pres.addSlide();
+        s2.background = { color: COL.bg };
+        s2.addText("[ Logo ]", { x: 1.008, y: 0.390, w: 2.533, h: 0.774, fontSize: 40, fontFace: fontFamily, color: COL.accent, bold: true, italic: true });
+        s2.addText("[Report Title]", { x: 1.081, y: 2.511, w: 8.171, h: 0.572, fontSize: 28, fontFace: fontFamily, color: COL.fg, bold: true });
+        s2.addText("Explain briefly what your report presents here.", { x: 1.081, y: 3.627, w: 8.025, h: 0.303, fontSize: 12, fontFace: fontFamily, color: COL.neutral });
         // 3 nav cards
-        const CARD_W2 = (W - PAD2 * 2 - 0.3 * 2) / 3;
-        const CARD_Y2 = 5.05;
-        const CARD_H2 = SH - CARD_Y2 - 0.3;
-        ["[Section 1]", "[Section 2]", "[Section 3]"].forEach((title, i) => {
-          const cx2 = PAD2 + i * (CARD_W2 + 0.3);
-          s2.addShape(pres.ShapeType.roundRect, { x: cx2, y: CARD_Y2, w: CARD_W2, h: CARD_H2, fill: { color: COL.panel }, line: { color: COL.border, width: 1 }, rectRadius: 0.12 });
-          s2.addText(title, { x: cx2 + 0.3, y: CARD_Y2 + 0.3, w: CARD_W2 - 0.6, h: 0.5, fontSize: 14, fontFace: fontFamily, color: COL.fg, bold: true, align: "center" });
-          s2.addText("[Brief description of what this section covers and the key insights available.]", { x: cx2 + 0.3, y: CARD_Y2 + 0.9, w: CARD_W2 - 0.6, h: 1.1, fontSize: 10, fontFace: fontFamily, color: COL.neutral, align: "center" });
-          const bY2 = CARD_Y2 + CARD_H2 - 0.82;
-          s2.addShape(pres.ShapeType.roundRect, { x: cx2 + CARD_W2 / 2 - 1.2, y: bY2, w: 2.4, h: 0.52, fill: { color: COL.accent }, line: { type: "none" }, rectRadius: 0.26 });
-          s2.addText("Proceed  \u203A", { x: cx2 + CARD_W2 / 2 - 1.2, y: bY2, w: 2.4, h: 0.52, fontSize: 11, fontFace: fontFamily, color: "FFFFFF", align: "center", valign: "middle", bold: true });
+        [2.301, 6.080, 9.859].forEach((cx, i) => {
+          s2.addShape(pres.ShapeType.roundRect, { x: cx, y: 5.718, w: 2.805, h: 2.508, fill: { color: COL.panel }, line: { color: COL.border, width: 1 }, rectRadius: 0.08 });
+          s2.addText(`[Report Page ${i + 1}]`, { x: cx + 0.15, y: 6.058, w: 2.505, h: 0.340, fontSize: 14, fontFace: fontFamily, color: COL.fg, bold: true, align: "center" });
+          s2.addText("[Brief section description.]", { x: cx + 0.08, y: 6.568, w: 2.645, h: 0.606, fontSize: 10, fontFace: fontFamily, color: COL.neutral, align: "center" });
         });
-      }
-
-      // ── Slide 3: Report page ─────────────────────────────────────────────────
-      const s3 = pres.addSlide();
-      s3.background = { color: COL.bg };
-      const PAD3 = 0.4;
-
-      if (isDark) {
-        // ── DARK REPORT: logo top-left, nav top-right, large title, 3-column cards ──
-
-        // Logo placeholder (no box)
-        s3.addText("[ Logo ]", { x: PAD3, y: 0.18, w: 2.0, h: 0.46, fontSize: 9, fontFace: fontFamily, color: COL.neutral, italic: true });
-
-        // Nav buttons top-right — 3 pill outline
-        const N3_W = 2.2, N3_H = 0.44, N3_GAP = 0.18;
-        const navLabels3D = ["[Page 1]", "[Page 2]", "Back to Home"];
-        const N3_X = W - PAD3 - navLabels3D.length * N3_W - (navLabels3D.length - 1) * N3_GAP;
-        navLabels3D.forEach((lbl, i) => {
-          const nx = N3_X + i * (N3_W + N3_GAP);
-          s3.addShape(pres.ShapeType.roundRect, { x: nx, y: 0.14, w: N3_W, h: N3_H, fill: { type: "none" }, line: { color: COL.neutral, width: 1 }, rectRadius: 0.22 });
-          s3.addText(lbl, { x: nx, y: 0.14, w: N3_W, h: N3_H, fontSize: 9, fontFace: fontFamily, color: COL.fg, align: "center", valign: "middle" });
+        // Slides 3–5: report pages — each has a different active tab
+        const LT_TAB_X = [9.110, 11.490, 13.860];
+        ["[Report Page 1]", "[Report Page 2]", "[Report Page 3]"].forEach((title, pgIdx) => {
+          const sn = pres.addSlide();
+          sn.background = { color: COL.bg };
+          sn.addText(title, { x: 0.609, y: 0.390, w: 6.157, h: 0.707, fontSize: 36, fontFace: fontFamily, color: COL.fg, bold: true });
+          sn.addShape(pres.ShapeType.rect, { x: 0.530, y: 1.149, w: 15.517, h: 0.050, fill: { color: COL.accent }, line: { type: "none" } });
+          sn.addShape(pres.ShapeType.roundRect, { x: 0.530, y: 1.447, w: 15.517, h: 7.355, fill: { color: COL.panel }, line: { color: COL.fg, width: 1.25 }, rectRadius: 0.08 });
+          LT_TAB_X.forEach((tx, ti) => {
+            const isActive = ti === pgIdx;
+            const tabH = isActive ? 0.341 : 0.270;
+            const tabY = isActive ? 0.760 : 0.796;
+            sn.addShape(pres.ShapeType.roundRect, { x: tx, y: tabY, w: 2.183, h: tabH, fill: { color: isActive ? COL.accent : COL.border }, line: { type: "none" }, rectRadius: 0.04 });
+            sn.addText(`Page ${ti + 1}`, { x: tx, y: tabY, w: 2.183, h: tabH, fontSize: 9, fontFace: fontFamily, color: isActive ? "FFFFFF" : COL.fg, align: "center", valign: "middle", bold: isActive });
+          });
+          sn.addText("[ Logo ]", { x: 15.340, y: 8.904, w: 1.414, h: 0.438, fontSize: 20, fontFace: fontFamily, color: COL.accent, bold: true, align: "center", italic: true });
         });
 
-        // Page title — large bold
-        s3.addText("[Page Title]", { x: PAD3, y: 0.72, w: 10, h: 0.88, fontSize: 40, fontFace: fontFamily, color: COL.fg, bold: true });
+      } else if (preset.id === "dark") {
+        // ── DARK TEMPLATE — 4 slides, fixed dark navy background ─────────────
+        const DK1 = "140A41", DK2 = "123266";
 
-        // Slicer dropdowns — top-right, aligned with title row
-        const SLICER_W = 2.6, SLICER_H = 0.46, SLICER_GAP = 0.25;
-        const SLICER_X = W - PAD3 - 2 * SLICER_W - SLICER_GAP;
-        [["Period", "All"], ["Offering Group", "All"]].forEach(([label, val], i) => {
-          const sx = SLICER_X + i * (SLICER_W + SLICER_GAP);
-          s3.addText(label, { x: sx, y: 0.75, w: SLICER_W, h: 0.22, fontSize: 8, fontFace: fontFamily, color: COL.neutral });
-          s3.addShape(pres.ShapeType.roundRect, { x: sx, y: 0.99, w: SLICER_W, h: SLICER_H, fill: { color: COL.panel }, line: { color: COL.border, width: 1 }, rectRadius: 0.05 });
-          s3.addText(val + "   \u25BE", { x: sx + 0.12, y: 0.99, w: SLICER_W - 0.2, h: SLICER_H, fontSize: 9, fontFace: fontFamily, color: COL.fg, valign: "middle" });
+        // Slide 2: Home
+        const s2 = pres.addSlide();
+        addDarkBg(s2, DK1, DK2);
+        s2.addText("[ Logo ]", { x: 0.987, y: 0.447, w: 3.013, h: 0.774, fontSize: 40, fontFace: fontFamily, color: COL.fg, bold: true, italic: true });
+        s2.addText("Welcome to your\n[Report Name]", { x: 1.081, y: 2.511, w: 6.693, h: 1.313, fontSize: 36, fontFace: fontFamily, color: COL.fg, bold: true });
+        s2.addText(
+          "This report provides a view of your activity and progress across the year.\n\nThe stats on the right offer a quick starting point. Use the navigation below to explore.",
+          { x: 1.081, y: 4.201, w: 6.567, h: 2.524, fontSize: 12, fontFace: fontFamily, color: COL.fg },
+        );
+        // KPI panel (right side)
+        s2.addText("Here are your key highlights for today:", { x: 9.131, y: 2.177, w: 5.453, h: 1.010, fontSize: 18, fontFace: fontFamily, color: COL.fg, bold: true, align: "center" });
+        [["[Placeholder 1]", 3.668], ["[Placeholder 2]", 4.909], ["[Placeholder 3]", 6.152], ["Last data refresh", 7.411]].forEach(([label, y], i) => {
+          const isLast = i === 3;
+          s2.addText(label, { x: 10.928, y, w: 2.510, h: 0.337, fontSize: 14, fontFace: fontFamily, color: isLast ? COL.accent : COL.fg, bold: true });
+          if (!isLast) s2.addText("[Value]", { x: 10.928, y: y + 0.35, w: 2.510, h: 0.280, fontSize: 12, fontFace: fontFamily, color: COL.accent });
         });
 
-        // Thin accent rule
-        const LINE_Y3D = 1.68;
-        s3.addShape(pres.ShapeType.rect, { x: 0, y: LINE_Y3D, w: W, h: 0.05, fill: { color: COL.accent }, line: { type: "none" } });
-
-        // 3 equal-column cards with distinct accent top borders
-        const CARD_Y3D = LINE_Y3D + 0.2;
-        const CARD_H3D = SH - CARD_Y3D - PAD3;
-        const CARD_W3D = (W - PAD3 * 2 - 0.3 * 2) / 3;
-        const cardAccents3 = [COL.accent, COL.accent2, accent3];
-        const cardTitles3 = ["[Section 1 Title]", "[Section 2 Title]", "[Section 3 Title]"];
-        cardAccents3.forEach((cardColor, i) => {
-          const cx3 = PAD3 + i * (CARD_W3D + 0.3);
-          s3.addShape(pres.ShapeType.roundRect, { x: cx3, y: CARD_Y3D, w: CARD_W3D, h: CARD_H3D, fill: { color: COL.panel }, line: { color: COL.border, width: 1 }, rectRadius: 0.1 });
-          // Accent stripe inset at top (rect corners hidden by card's rounded corners)
-          s3.addShape(pres.ShapeType.rect, { x: cx3 + 0.05, y: CARD_Y3D, w: CARD_W3D - 0.1, h: 0.14, fill: { color: cardColor }, line: { type: "none" } });
-          // Card title in accent
-          s3.addText(cardTitles3[i], { x: cx3 + 0.25, y: CARD_Y3D + 0.22, w: CARD_W3D - 0.5, h: 0.46, fontSize: 14, fontFace: fontFamily, color: cardColor, align: "center" });
-          // Visual area placeholder
-          const VIS_Y = CARD_Y3D + 0.82;
-          s3.addShape(pres.ShapeType.rect, { x: cx3 + 0.15, y: VIS_Y, w: CARD_W3D - 0.3, h: CARD_H3D - 0.98, fill: { type: "none" }, line: { color: COL.border, width: 1, dashType: "dash" } });
-          s3.addText("[Visual]", { x: cx3 + 0.15, y: VIS_Y + (CARD_H3D - 0.98) / 2 - 0.2, w: CARD_W3D - 0.3, h: 0.4, fontSize: 10, fontFace: fontFamily, color: COL.border, align: "center", italic: true });
+        // Slide 3: Performance Overview — 3-column layout
+        const s3 = pres.addSlide();
+        addDarkBg(s3, DK1, DK2);
+        s3.addText("[ Logo ]", { x: 0.328, y: 0.155, w: 1.865, h: 0.640, fontSize: 32, fontFace: fontFamily, color: COL.fg, bold: true, italic: true });
+        s3.addText("Performance Overview", { x: 0.756, y: 1.017, w: 11.213, h: 0.707, fontSize: 36, fontFace: fontFamily, color: COL.fg, bold: true });
+        [[0.760, "[KPI 1]", COL.accent], [6.113, "[KPI 2]", COL.accent2], [11.465, "[KPI 3]", accent3]].forEach(([colX, label, color]) => {
+          s3.addShape(pres.ShapeType.roundRect, { x: colX, y: 1.810, w: 4.553, h: 6.851, fill: { color: DK2 }, line: { type: "none" }, rectRadius: 0.06 });
+          s3.addShape(pres.ShapeType.rect, { x: colX, y: 1.810, w: 4.553, h: 0.08, fill: { color }, line: { type: "none" } });
+          s3.addText(label, { x: colX + 0.30, y: 2.400, w: 3.953, h: 0.404, fontSize: 18, fontFace: fontFamily, color, bold: true, align: "center" });
+          [3.10, 4.88, 6.70].forEach((chy, ci) => {
+            s3.addText(`[Chart ${ci + 1}]`, { x: colX + 0.30, y: chy, w: 3.953, h: 0.337, fontSize: 14, fontFace: fontFamily, color: COL.fg, bold: true });
+            s3.addShape(pres.ShapeType.rect, { x: colX + 0.30, y: chy + 0.35, w: 3.953, h: 1.20, fill: { type: "none" }, line: { color: COL.neutral, width: 1, dashType: "dash" } });
+          });
         });
+
+        // Slide 4: Blank content page
+        const s4 = pres.addSlide();
+        addDarkBg(s4, DK1, DK2);
+        s4.addText("[ Logo ]", { x: 0.328, y: 0.155, w: 1.865, h: 0.640, fontSize: 32, fontFace: fontFamily, color: COL.fg, bold: true, italic: true });
+        s4.addText("[Report Title]", { x: 0.756, y: 0.840, w: 11.213, h: 0.635, fontSize: 32, fontFace: fontFamily, color: COL.fg, bold: true });
+        s4.addShape(pres.ShapeType.roundRect, { x: 11.275, y: 1.709, w: 4.553, h: 7.063, fill: { color: DK2 }, line: { color: COL.accent, width: 1.5 }, rectRadius: 0.06 });
+        s4.addShape(pres.ShapeType.roundRect, { x: 0.530, y: 1.710, w: 10.540, h: 7.062, fill: { type: "none" }, line: { color: COL.neutral, width: 1, dashType: "dash" }, rectRadius: 0.06 });
+        s4.addText("[Power BI visuals go here]", { x: 0.530, y: 5.100, w: 10.540, h: 0.400, fontSize: 13, fontFace: fontFamily, color: COL.neutral, align: "center", italic: true });
+
+      } else if (preset.id === "canvas") {
+        // ── ALTERNATIVE TEMPLATE — 2 slides, all colours adapt ───────────────
+
+        // Slide 2: Home
+        const s2 = pres.addSlide();
+        addDarkBg(s2, BD1, BD2);
+        s2.addShape(pres.ShapeType.rect, { x: 0, y: 0.582, w: W, h: 0.025, fill: { color: "FFFFFF" }, line: { type: "none" } });
+        s2.addText("[ Logo ]", { x: 0.137, y: 0.033, w: 1.687, h: 0.505, fontSize: 24, fontFace: fontFamily, color: "FFFFFF", bold: true, align: "center", italic: true });
+        s2.addText("Your Report Title", { x: 0.694, y: 0.907, w: 3.748, h: 0.741, fontSize: 24, fontFace: fontFamily, color: "FFFFFF", bold: true });
+        s2.addShape(pres.ShapeType.rect, { x: 0, y: 2.051, w: W, h: 0.025, fill: { color: "FFFFFF" }, line: { type: "none" } });
+        s2.addShape(pres.ShapeType.rect, { x: 0.577, y: 2.297, w: 0.008, h: 1.084, fill: { color: COL.accent }, line: { type: "none" } });
+        s2.addText("What is the purpose of this solution?", { x: 1.824, y: 2.229, w: 13.778, h: 0.406, fontSize: 18, fontFace: fontFamily, color: "FFFFFF", bold: true });
+        s2.addText(
+          "Use this section to provide a high-level overview of the report's purpose and scope.\n\nThis report has been designed for the [Team Name] team to track and monitor key metrics.",
+          { x: 0.694, y: 2.670, w: 15.23, h: 0.860, fontSize: 12, fontFace: fontFamily, color: "FFFFFF" },
+        );
+        // 4 nav cards
+        [0.584, 4.618, 8.666, 12.708].forEach((cx, i) => {
+          s2.addText(`[Report Page ${i + 1}]`, { x: cx, y: 5.094, w: 3.241, h: 0.404, fontSize: 18, fontFace: fontFamily, color: "FFFFFF", bold: true, align: "center" });
+          s2.addShape(pres.ShapeType.roundRect, { x: cx, y: 5.628, w: 3.241, h: 0.40, fill: { color: COL.accent }, line: { type: "none" }, rectRadius: 0.1 });
+          s2.addShape(pres.ShapeType.roundRect, { x: cx, y: 5.828, w: 3.241, h: SH - 5.828 - 0.10, fill: { color: BD3 }, line: { type: "none" }, rectRadius: 0.1 });
+        });
+
+        // Slide 3: Content page
+        const s3 = pres.addSlide();
+        addDarkBg(s3, BD1, BD2);
+        s3.addShape(pres.ShapeType.rect, { x: 0, y: 0.582, w: W, h: 0.025, fill: { color: "FFFFFF" }, line: { type: "none" } });
+        s3.addText("[ Logo ]", { x: 0.337, y: 0.038, w: 1.687, h: 0.505, fontSize: 24, fontFace: fontFamily, color: "FFFFFF", bold: true, align: "center", italic: true });
+        s3.addText("[Page Name]", { x: 0.694, y: 0.832, w: 6.996, h: 0.707, fontSize: 32, fontFace: fontFamily, color: "FFFFFF", bold: true });
+        s3.addText("Subtitle", { x: 0.694, y: 1.543, w: 6.996, h: 0.350, fontSize: 14, fontFace: fontFamily, color: "FFFFFF" });
+        s3.addShape(pres.ShapeType.rect, { x: 0, y: 1.957, w: W, h: 0.025, fill: { color: "FFFFFF" }, line: { type: "none" } });
+        s3.addShape(pres.ShapeType.rect, { x: 0, y: 1.982, w: W, h: SH - 1.982, fill: { color: COL.panel }, line: { type: "none" } });
+        s3.addText("[Power BI visuals go here]", { x: 0.4, y: (1.982 + SH) / 2 - 0.2, w: W - 0.8, h: 0.400, fontSize: 13, fontFace: fontFamily, color: COL.border, align: "center", italic: true });
 
       } else {
-        // ── LIGHT REPORT: large title, accent rule, nav tabs, content area ───
+        // preset.id === "contrast"
+        // ── BRAND TEMPLATE — 2 slides, all colours adapt ─────────────────────
 
-        // Page title — very large bold
-        s3.addText("[Page Title]", { x: PAD3, y: 0.1, w: 9.5, h: 1.05, fontSize: 42, fontFace: fontFamily, color: COL.fg, bold: true, valign: "middle" });
-
-        // Last Data Refresh — top-right
-        s3.addText("Last Data Refresh:", { x: W - 5.5, y: 0.08, w: 5.2, h: 0.26, fontSize: 9, fontFace: fontFamily, color: COL.neutral, align: "right" });
-        s3.addText("[Date]", { x: W - 5.5, y: 0.35, w: 5.2, h: 0.26, fontSize: 9, fontFace: fontFamily, color: COL.accent, align: "right" });
-
-        // Nav tabs top-right — 3 pills, first active
-        const NT_W = 2.2, NT_H = 0.44, NT_GAP = 0.12;
-        const NT_Y = 0.66;
-        const navTabLabels3 = ["[Active Page]", "[Page 2]", "[Page 3]"];
-        const NT_X = W - PAD3 - navTabLabels3.length * NT_W - (navTabLabels3.length - 1) * NT_GAP;
-        navTabLabels3.forEach((lbl, i) => {
-          const nx = NT_X + i * (NT_W + NT_GAP);
-          const isActive = i === 0;
-          s3.addShape(pres.ShapeType.roundRect, { x: nx, y: NT_Y, w: NT_W, h: NT_H, fill: isActive ? { color: COL.accent } : { color: COL.border }, line: { type: "none" }, rectRadius: 0.06 });
-          s3.addText(lbl, { x: nx, y: NT_Y, w: NT_W, h: NT_H, fontSize: 9, fontFace: fontFamily, color: isActive ? "FFFFFF" : COL.fg, align: "center", valign: "middle", bold: isActive });
+        // Slide 2: Dashboard / Navigation page
+        const s2 = pres.addSlide();
+        addDarkBg(s2, BD1, BD2);
+        s2.addShape(pres.ShapeType.rect, { x: 0, y: 0.582, w: W, h: 0.025, fill: { color: "FFFFFF" }, line: { type: "none" } });
+        s2.addText("[ Logo ]", { x: 0.137, y: 0.033, w: 1.687, h: 0.505, fontSize: 24, fontFace: fontFamily, color: "FFFFFF", bold: true, align: "center", italic: true });
+        s2.addText("[Page Name]", { x: 0.694, y: 0.907, w: 3.748, h: 1.144, fontSize: 24, fontFace: fontFamily, color: "FFFFFF", bold: true });
+        // 4 KPI tiles (top row)
+        [[0.584, 2.475], [3.429, 2.475], [6.313, 4.450], [11.205, 4.878]].forEach(([x, w], i) => {
+          s2.addShape(pres.ShapeType.roundRect, { x, y: 1.855, w, h: 1.144, fill: { color: BD3 }, line: { color: COL.accent, width: 1 }, rectRadius: 0.08 });
+          s2.addShape(pres.ShapeType.rect, { x, y: 1.855, w, h: 0.10, fill: { color: [COL.accent, COL.accent2, accent3, COL.accent][i] }, line: { type: "none" } });
+          s2.addText("[KPI]", { x: x + 0.15, y: 1.90, w: w - 0.30, h: 0.55, fontSize: 14, fontFace: fontFamily, color: "FFFFFF", bold: true, align: "center", valign: "middle" });
         });
+        // Left visual panel
+        s2.addShape(pres.ShapeType.roundRect, { x: 0.584, y: 3.374, w: 5.320, h: 5.662, fill: { color: BD3 }, line: { type: "none" }, rectRadius: 0.08 });
+        s2.addShape(pres.ShapeType.rect, { x: 0.584, y: 3.374, w: 5.320, h: 0.12, fill: { color: COL.accent }, line: { type: "none" } });
+        s2.addText("[Visual Area 1]", { x: 0.584, y: 5.700, w: 5.320, h: 0.40, fontSize: 12, fontFace: fontFamily, color: COL.neutral, align: "center", italic: true });
+        // Right visual panel
+        s2.addShape(pres.ShapeType.roundRect, { x: 6.313, y: 3.374, w: 9.770, h: 5.662, fill: { color: BD3 }, line: { type: "none" }, rectRadius: 0.08 });
+        s2.addShape(pres.ShapeType.rect, { x: 6.313, y: 3.374, w: 9.770, h: 0.12, fill: { color: COL.accent2 }, line: { type: "none" } });
+        s2.addText("[Visual Area 2]", { x: 6.313, y: 6.100, w: 9.770, h: 0.40, fontSize: 12, fontFace: fontFamily, color: COL.neutral, align: "center", italic: true });
 
-        // Thin accent horizontal rule
-        const LINE_Y3L = 1.22;
-        s3.addShape(pres.ShapeType.rect, { x: 0, y: LINE_Y3L, w: W, h: 0.055, fill: { color: COL.accent }, line: { type: "none" } });
-
-        // Main content area — large single placeholder card
-        const CONT_Y3L = LINE_Y3L + 0.18;
-        const CONT_H3L = SH - CONT_Y3L - 0.55;
-        s3.addShape(pres.ShapeType.roundRect, { x: PAD3, y: CONT_Y3L, w: W - PAD3 * 2, h: CONT_H3L, fill: { color: COL.panel }, line: { color: COL.border, width: 1 }, rectRadius: 0.12 });
-        s3.addText("[Power BI visuals go here]", { x: PAD3, y: CONT_Y3L + CONT_H3L / 2 - 0.2, w: W - PAD3 * 2, h: 0.4, fontSize: 13, fontFace: fontFamily, color: COL.border, align: "center", italic: true });
-
-        // Logo bottom-right
-        s3.addText("[ Logo ]", { x: W - 2.5, y: SH - 0.48, w: 2.1, h: 0.35, fontSize: 9, fontFace: fontFamily, color: COL.neutral, align: "right", italic: true });
+        // Slide 3: Home Overview page
+        const s3 = pres.addSlide();
+        addDarkBg(s3, BD1, BD2);
+        s3.addShape(pres.ShapeType.rect, { x: 0, y: 0.582, w: W, h: 0.025, fill: { color: "FFFFFF" }, line: { type: "none" } });
+        s3.addText("[ Logo ]", { x: 0.137, y: 0.033, w: 1.687, h: 0.505, fontSize: 24, fontFace: fontFamily, color: "FFFFFF", bold: true, align: "center", italic: true });
+        s3.addText("Your Report Title", { x: 0.694, y: 0.907, w: 3.748, h: 0.741, fontSize: 24, fontFace: fontFamily, color: "FFFFFF", bold: true });
+        s3.addShape(pres.ShapeType.rect, { x: 0, y: 2.051, w: W, h: 0.025, fill: { color: "FFFFFF" }, line: { type: "none" } });
+        s3.addShape(pres.ShapeType.rect, { x: 0.577, y: 2.297, w: 0.008, h: 1.084, fill: { color: COL.accent }, line: { type: "none" } });
+        s3.addText("What is the purpose of this solution?", { x: 1.824, y: 2.229, w: 13.778, h: 0.406, fontSize: 18, fontFace: fontFamily, color: "FFFFFF", bold: true });
+        s3.addText("Use this section to provide a high-level overview of the report's purpose and scope.", { x: 0.694, y: 2.670, w: 15.23, h: 0.860, fontSize: 12, fontFace: fontFamily, color: "FFFFFF" });
+        // 3 nav cards
+        [[2.102, COL.accent], [6.713, COL.accent2], [11.324, accent3]].forEach(([cx, acColor], i) => {
+          s3.addShape(pres.ShapeType.roundRect, { x: cx, y: 4.747, w: 3.241, h: 3.297, fill: { color: BD3 }, line: { color: acColor, width: 1 }, rectRadius: 0.10 });
+          s3.addShape(pres.ShapeType.rect, { x: cx, y: 4.747, w: 3.241, h: 0.12, fill: { color: acColor }, line: { type: "none" } });
+          s3.addText(`[Section ${i + 1}]`, { x: cx + 0.15, y: 4.997, w: 2.941, h: 0.40, fontSize: 14, fontFace: fontFamily, color: "FFFFFF", bold: true, align: "center" });
+          s3.addShape(pres.ShapeType.rect, { x: cx + 0.20, y: 5.547, w: 2.841, h: 2.347, fill: { type: "none" }, line: { color: "FFFFFF", width: 1, dashType: "dash" } });
+        });
       }
 
       await pres.writeFile({ fileName: `${slug}-background-template.pptx` });
